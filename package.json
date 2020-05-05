@@ -35,21 +35,21 @@
     "build:esm": "tsc -p tsconfig.esm.json"
   },
   "devDependencies": {
-    "@mothepro/signaling-lobby": "^0.1.0",
+    "@mothepro/signaling-lobby": "^0.1.2",
     "@types/mocha": "^7.0.2",
     "@types/should-sinon": "^0.0.6",
     "gh-pages": "^2.2.0",
     "importly": "^0.1.0-dev.0",
     "lit-element": "^2.3.1",
-    "mocha": "^7.1.1",
-    "np": "^6.2.1",
-    "replace": "^1.1.5",
+    "mocha": "^7.1.2",
+    "np": "^6.2.3",
+    "replace": "^1.2.0",
     "should": "^13.2.3",
     "should-sinon": "^0.0.6",
     "sinon": "^9.0.2",
     "typescript": "^3.8.3"
   },
   "dependencies": {
-    "@mothepro/ez-rtc": "^0.0.3"
+    "@mothepro/ez-rtc": "^0.0.4"
   }
 }
