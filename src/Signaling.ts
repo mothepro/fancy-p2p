@@ -1,6 +1,5 @@
-import { SafeSingleEmitter, SingleEmitter, SafeEmitter, Emitter } from 'fancy-emitter'
-import Connection from '@mothepro/ez-rtc'
-import { ClientID, Size, Code, Name, LobbyID, Max } from '@mothepro/signaling-lobby'
+import { SafeSingleEmitter, SafeEmitter, Emitter } from 'fancy-emitter'
+import { ClientID, Code, Name, LobbyID, Max } from '@mothepro/signaling-lobby'
 import { buildProposal, buildIntro } from '../util/builders.js'
 import { parseGroupFinalize, parseGroupChange, parseClientLeave, parseClientJoin, parseSdp } from '../util/parsers.js'
 
@@ -18,15 +17,10 @@ export default class {
   // TODO replace with a simple array after grouping.
   private readonly names: Map<ClientID, Name> = new Map
 
-  private readonly groups: Set<string> = new Set
-
-  // Send intro when ready
-  private readonly serverOpen = new SafeSingleEmitter(() => this.socket.send(buildIntro(this.lobby, this.name)))
-
-  private readonly serverClose = new SingleEmitter
+  private readonly groups: Map<string, Emitter<ClientID>> = new Map
 
   /** Received some Data from the Server */
-  private readonly serverMessage = new SafeEmitter<DataView>(data => {
+  private readonly message = new Emitter<DataView>(data => {
     if (this.groupFinal.triggered)
       parseSdp(data)
     else
@@ -41,11 +35,25 @@ export default class {
 
         case Code.GROUP_REJECT:
         case Code.GROUP_REQUEST:
-          const { approve, actor, members } = parseGroupChange(data)
-          if (approve)
-            this.groupJoin.activate({ actor, members })
-          else
-            this.groupLeave.activate({ actor, members })
+          const { approve, actor, members } = parseGroupChange(data),
+            hash = members.sort().toString()
+          
+          if (approve) {
+            // Initiate the group if it hasn't been propopsed before
+            if (!this.groups.has(hash)) {
+              this.groups.set(hash, new Emitter)
+              this.groupInitiate.activate({
+                members,
+                ack: this.groups.get(hash)!,
+                action: (accept) => this.socket.send(buildProposal(accept, ...members))
+              })
+            }
+
+            this.groups.get(hash)!.activate(actor)
+          } else {
+            this.groups.get(hash)?.cancel()
+            this.groups.delete(hash)
+          }
           break
 
         case Code.GROUP_FINAL:
@@ -72,27 +80,13 @@ export default class {
 
   /** Activated when a group proposal/ack message is received. */
   readonly groupInitiate = new SafeEmitter<{
-    actor: ClientID
+    /** The members in this group */
     members: ClientID[]
+    /** Function to accept or reject the group */
     action(accept: boolean): void
-    // ack: Emitter<ClientID> // TODO this can be used to replace the `groupJoin` and `groupLeave` emitters
+    /** The id of client just accepted the group. Cancelled when someone rejects. */
+    ack: Emitter<ClientID>
   }>()
-
-  /** Activated when a group proposal/ack message is received. */
-  readonly groupJoin = new SafeEmitter<{
-    actor: ClientID
-    members: ClientID[]
-  }>(
-    // Initiate the group if it hasn't been propopsed before
-    ({ actor, members }) => !this.groups.has(members.sort().toString())
-      && this.groupInitiate.activate({ actor, members, action: (accept) => this.socket.send(buildProposal(accept, ...members)) }),
-    ({ members }) => this.groups.add(members.sort().toString()))
-
-  /** Activated when a group reject message is received. */
-  readonly groupLeave = new SafeEmitter<{
-    actor: ClientID
-    members: ClientID[]
-  }>(({ members }) => this.groups.delete(members.sort().toString()))
 
   /** Activated when a group finalization message is received. */
   // TODO cancel all other emitters?
@@ -104,20 +98,16 @@ export default class {
     }[]
   }>()
 
-  constructor(
-    socket: string,
-    private readonly lobby: LobbyID,
-    private readonly name: Name
-  ) {
-    this.socket = new WebSocket(socket)
-
-    this.socket.addEventListener('open', this.serverOpen.activate)
-    this.socket.addEventListener('close', this.serverClose.activate)
-    this.socket.addEventListener('error', ev => this.serverClose.deactivate(Error(`Connection to Server closed unexpectedly. ${ev}`)))
+  constructor(address: string, lobby: LobbyID, name: Name) {
+    this.socket = new WebSocket(address)
+    this.socket.addEventListener('open', () => this.socket.send(buildIntro(lobby, name)))
+    this.socket.addEventListener('close', this.message.cancel)
+    this.socket.addEventListener('error', ev => this.message.deactivate(Error(`Connection to Server closed unexpectedly. ${ev}`)))
     this.socket.addEventListener('message', async ({ data }) => data instanceof Blob
-      && this.serverMessage.activate(new DataView(await data.arrayBuffer())))
+      && this.message.activate(new DataView(await data.arrayBuffer())))
   }
 
+  // should activate group initiate?
   proposeGroup = (...ids: ClientID[]) => this.socket.send(buildProposal(true, ...ids))
 
   close = () => this.socket.close()
