@@ -74,8 +74,10 @@ export function parseSdp(data: DataView) {
     return {
       from: data.getUint16(0, true),
       sdp: {
-        type: MessageType[data.getUint8(Size.SHORT)],
+        type: MessageType[data.getUint8(Size.SHORT)] as RTCSdpType,
         sdp: decoder.decode(data.buffer.slice(Size.SHORT + Size.CHAR)),
       }
     }
+  
+  throw Error(`Expected a SDP message, but got ${data}`)
 }
