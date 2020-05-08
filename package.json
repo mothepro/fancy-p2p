@@ -38,6 +38,7 @@
     "@mothepro/signaling-lobby": "^0.1.2",
     "@types/mocha": "^7.0.2",
     "@types/should-sinon": "^0.0.6",
+    "@types/ws": "^7.2.4",
     "gh-pages": "^2.2.0",
     "importly": "^0.1.0-dev.0",
     "lit-element": "^2.3.1",

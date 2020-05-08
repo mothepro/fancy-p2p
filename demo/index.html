@@ -17,7 +17,13 @@
 </head>
 
 <body>
-
+  <form action>
+    <input required type="number" name="port" id="port" placeholder="Port" />
+    <input required type="number" name="lobby" placeholder="Lobby Code" />
+    <input required type="text" name="name" placeholder="Name" />
+    <input type="submit" value="Connect">
+  </form>
+  <lit-socket></lit-socket>
 </body>
 
 </html>

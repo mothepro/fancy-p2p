@@ -1,6 +1,7 @@
 {
   "imports": {
-    "@mothepro/easy-rtc": "//unpkg.com/@mothepro/easy-rtc@1.0.1/dist/index.js",
+    "@mothepro/ez-rtc/": "https://unpkg.com/@mothepro/ez-rtc@0.0.4/",
+    "@mothepro/ez-rtc": "https://unpkg.com/@mothepro/ez-rtc@0.0.4/dist/esm/index.js",
     "lit-element/": "//unpkg.com/lit-element@2.2.1/",
     "lit-element": "//unpkg.com/lit-element@2.2.1/lit-element.js",
     "lit-html/": "//unpkg.com/lit-html@1.1.2/",
