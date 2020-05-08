@@ -51,7 +51,7 @@ export default class {
           if (approve) {
             // Initiate the group if it hasn't been propopsed before
             if (!this.groups.has(hash)) {
-              this.groups.set(hash, new Emitter)
+              this.groups.set(hash, new Emitter<ClientID>().activate(actor))
               this.groupInitiate.activate({
                 members,
                 ack: this.groups.get(hash)!,
@@ -60,7 +60,7 @@ export default class {
             } else
               this.groups.get(hash)!.activate(actor)
           } else {
-            this.groups.get(hash)?.cancel()
+            this.groups.get(hash)?.cancel() // TODO, worth it to deactivate with ID of leaver?
             this.groups.delete(hash)
           }
           return
@@ -105,8 +105,8 @@ export default class {
   readonly groupInitiate: SafeEmitter<{
     /** The members in this group */
     members: ClientID[]
-    /** Function to accept or reject the group */
-    action(accept: boolean): void
+    /** Function to accept or reject the group, not included if you created the group */
+    action?(accept: boolean): void
     /** The id of client just accepted the group. Cancelled when someone rejects. */
     ack: Emitter<ClientID>
   }> = new SafeEmitter
@@ -128,8 +128,18 @@ export default class {
       && this.message.activate(new DataView(await data.arrayBuffer())))
   }
 
-  // should activate group initiate?
-  proposeGroup = (...ids: ClientID[]) => this.server.send(buildProposal(true, ...ids))
+  // TODO make DRY with `message` switch case
+  proposeGroup = (...members: ClientID[]) => {
+    const hash = members.sort().toString()
+
+    if (this.groups.has(hash))
+      throw Error('Can not propose a group that is already formed.')
+    
+    const ack = new Emitter<ClientID>()
+    this.groupInitiate.activate({ members, ack })
+    this.groups.set(hash, ack)
+    this.server.send(buildProposal(true, ...members))
+  }
 
   close = () => this.server.close()
 }
