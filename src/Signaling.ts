@@ -28,6 +28,36 @@ export default class {
 
   private readonly acceptors: Map<ClientID, SafeSingleEmitter<RTCSessionDescriptionInit>> = new Map
 
+  /** Activated when connection to server is established. */
+  readonly ready = new SafeSingleEmitter(() => this.server.send(buildIntro(this.lobby, this.name)))
+
+  /** Activated when a client join message is received. */
+  readonly join: SafeEmitter<{
+    id: ClientID
+    name: Name
+  }> = new SafeEmitter
+
+  /** Activated when a client leave message is received. */
+  readonly leave: SafeEmitter<ClientID> = new SafeEmitter
+
+  /** Activated when a group proposal/ack message is received. */
+  readonly groupInitiate: SafeEmitter<{
+    /** The members in this group */
+    members: ClientID[]
+    /** Function to accept or reject the group, not included if you created the group */
+    action?(accept: boolean): void
+    /** The id of client just accepted the group. Cancelled when someone rejects. */
+    ack: Emitter<ClientID>
+  }> = new SafeEmitter
+
+  /** Activated when a group finalization message is received. */
+  // TODO cancel all other emitters?
+  // TODO deactivate on errors
+  readonly groupFinal: SafeSingleEmitter<{
+    code: number
+    members: Map<ClientID, Opener | Closer>
+  }> = new SafeSingleEmitter
+
   /** Received some Data from the Server */
   private readonly message = new Emitter<DataView>(data => {
     if (this.groupFinal.triggered) {
@@ -92,36 +122,9 @@ export default class {
       }
   })
 
-  /** Activated when a client join message is received. */
-  readonly join: SafeEmitter<{
-    id: ClientID
-    name: Name
-  }> = new SafeEmitter
-
-  /** Activated when a client leave message is received. */
-  readonly leave: SafeEmitter<ClientID> = new SafeEmitter
-
-  /** Activated when a group proposal/ack message is received. */
-  readonly groupInitiate: SafeEmitter<{
-    /** The members in this group */
-    members: ClientID[]
-    /** Function to accept or reject the group, not included if you created the group */
-    action?(accept: boolean): void
-    /** The id of client just accepted the group. Cancelled when someone rejects. */
-    ack: Emitter<ClientID>
-  }> = new SafeEmitter
-
-  /** Activated when a group finalization message is received. */
-  // TODO cancel all other emitters?
-  // TODO deactivate on errors
-  readonly groupFinal: SafeSingleEmitter<{
-    code: number
-    members: Map<ClientID, Opener | Closer>
-  }> = new SafeSingleEmitter
-
-  constructor(address: string, lobby: LobbyID, name: Name) {
+  constructor(address: string, private readonly lobby: LobbyID, private readonly name: Name) {
     this.server = new WebSocket(address)
-    this.server.addEventListener('open', () => this.server.send(buildIntro(lobby, name)))
+    this.server.addEventListener('open', this.ready.activate)
     this.server.addEventListener('close', this.message.cancel)
     this.server.addEventListener('error', ev => this.message.deactivate(Error(`Connection to Server closed unexpectedly. ${ev}`)))
     this.server.addEventListener('message', async ({ data }) => data instanceof Blob
