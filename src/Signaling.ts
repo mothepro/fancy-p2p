@@ -24,13 +24,7 @@ export default class {
 
   private readonly server: WebSocket
 
-  /** Names belonging to all clients connected. */
-  // TODO replace with a simple array after grouping.
-  private readonly names: Map<ClientID, Name> = new Map
-
   private readonly groups: Map<string, Emitter<ClientID>> = new Map
-
-  private readonly creators: Map<ClientID, SafeSingleEmitter<RTCSessionDescriptionInit>> = new Map
 
   private readonly acceptors: Map<ClientID, SafeSingleEmitter<RTCSessionDescriptionInit>> = new Map
 
@@ -42,11 +36,11 @@ export default class {
     } else
       switch (data.getUint8(0)) {
         case Code.CLIENT_JOIN:
-          this.clientJoin.activate(parseClientJoin(data))
+          this.join.activate(parseClientJoin(data))
           return
 
         case Code.CLIENT_LEAVE:
-          this.clientLeave.activate(parseClientLeave(data))
+          this.leave.activate(parseClientLeave(data))
           return
 
         case Code.GROUP_REJECT:
@@ -74,22 +68,22 @@ export default class {
         case Code.GROUP_FINAL:
           const { code, members: ids, cmp } = parseGroupFinalize(data),
             emitters = new Map<ClientID, Opener | Closer>()
-          
+
           // TODO make better!
           for (const other of ids) {
+            const create = new SafeSingleEmitter<RTCSessionDescriptionInit>(sdp => this.server.send(buildSdp(other, sdp)))
             this.acceptors.set(other, new SafeSingleEmitter<RTCSessionDescriptionInit>())
-            this.creators.set(other, new SafeSingleEmitter<RTCSessionDescriptionInit>(sdp => this.server.send(buildSdp(other, sdp))))
 
             // The `cmp` is sent from the server as a way to determine what is can be true on all instances.
-            if (cmp < other) // we should be opener (send offer, accept answer)
+            if (cmp < other) // we should be a opener (send offer -> accept answer)
               emitters.set(other, {
-                createOffer: this.creators.get(other)!.activate,
+                createOffer: create.activate,
                 acceptAnswer: this.acceptors.get(other)!.event,
               })
-            else // we should be closer (accept offer, send answer)
+            else // we should be a closer (accept offer -> send answer)
               emitters.set(other, {
                 acceptOffer: this.acceptors.get(other)!.event,
-                createAnswer: this.creators.get(other)!.activate,
+                createAnswer: create.activate,
               })
           }
 
@@ -99,31 +93,31 @@ export default class {
   })
 
   /** Activated when a client join message is received. */
-  readonly clientJoin = new SafeEmitter<{
+  readonly join: SafeEmitter<{
     id: ClientID
     name: Name
-  }>(({ id, name }) => this.names.set(id, name))
+  }> = new SafeEmitter
 
   /** Activated when a client leave message is received. */
-  readonly clientLeave = new SafeEmitter<ClientID>(id => this.names.delete(id))
+  readonly leave: SafeEmitter<ClientID> = new SafeEmitter
 
   /** Activated when a group proposal/ack message is received. */
-  readonly groupInitiate = new SafeEmitter<{
+  readonly groupInitiate: SafeEmitter<{
     /** The members in this group */
     members: ClientID[]
     /** Function to accept or reject the group */
     action(accept: boolean): void
     /** The id of client just accepted the group. Cancelled when someone rejects. */
     ack: Emitter<ClientID>
-  }>()
+  }> = new SafeEmitter
 
   /** Activated when a group finalization message is received. */
   // TODO cancel all other emitters?
   // TODO deactivate on errors
-  readonly groupFinal = new SafeSingleEmitter<{
+  readonly groupFinal: SafeSingleEmitter<{
     code: number
     members: Map<ClientID, Opener | Closer>
-  }>()
+  }> = new SafeSingleEmitter
 
   constructor(address: string, lobby: LobbyID, name: Name) {
     this.server = new WebSocket(address)
