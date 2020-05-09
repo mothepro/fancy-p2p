@@ -38,10 +38,7 @@ export default class extends LitElement {
       this.log = `proposal ${members}`
       ack
         .on(member => this.log = `${member} has joined ${members}`)
-        .catch(e => {
-          this.log = `Group with ${members} is closed`
-          this.log = e
-        })
+        .catch(e => this.log = [`Group with ${members} is closed`, e])
     })
   }
 

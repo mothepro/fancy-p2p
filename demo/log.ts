@@ -15,8 +15,13 @@ export default class extends LitElement {
   `
 
   updated(attrs: Map<string, string>) {
-    if (attrs.has('entry') && this.entry && this.entry != attrs.get('entry'))
-      this.entries = [{ entry: this.entry, date: new Date }, ...this.entries]
+    if (attrs.has('entry') && this.entry && this.entry != attrs.get('entry')) {
+      if (Array.isArray(this.entry))
+        for (const entry of this.entry)
+          this.entries = [{ entry, date: new Date }, ...this.entries]
+      else
+        this.entries = [{ entry: this.entry, date: new Date }, ...this.entries]
+    }
   }
 
   render = () => html`
