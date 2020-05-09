@@ -23,7 +23,17 @@
     <input required type="text" name="name" placeholder="Name" />
     <input type="submit" value="Connect">
   </form>
-  <lit-socket></lit-socket>
+
+  <!-- Add `lit-peer` element with the attributes if the query parameters are set. -->
+  <script>
+    const params = new URLSearchParams(location.search)
+    if (params.has('port') && params.has('lobby') && params.has('name'))
+      document.body.innerHTML += `<lit-peer
+          port=${params.get('port')}
+          name=${params.get('name')}
+          lobby=${params.get('lobby')}
+        ></lit-peer>`
+  </script>
 </body>
 
 </html>

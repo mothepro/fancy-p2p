@@ -1,33 +1,40 @@
 import { LitElement, html, customElement, property } from 'lit-element'
-import Wow from '../index.js'
+import Peer from '../index.js'
 import './log.js'
 
-const params = new URLSearchParams(location.search)
-
-@customElement('lit-socket')
+@customElement('lit-peer')
 export default class extends LitElement {
+  @property({ type: Number })
+  private port!: number
+
+  @property({ type: Number })
+  private lobby!: number
+
+  @property({ type: String })
+  private name!: string
+
   @property({ attribute: false, type: Object })
   private clients: { [key: number]: { name: string, ack: boolean } } = {}
 
   @property({ attribute: false, type: String })
-  private log: any = 'Ready'
+  private log: any = 'Initiated with State as 0'
 
-  private readonly wow = new Wow(
-    `ws://localhost:${parseInt(params.get('port')!)}`,
-    ['stun:stun.l.google.com:19302'],
-
-    parseInt(params.get('lobby')!),
-    params.get('name')!)
+  private peer!: Peer
 
   firstUpdated() {
-    this.wow.stateChange
-      .on(state => this.log = `State changed ${state}`)
+    this.peer = new Peer(
+      `ws://localhost:${this.port}`,
+      ['stun:stun.l.google.com:19302'],
+      this.lobby, this.name)
+
+    this.peer.stateChange
+      .on(state => this.log = `State changed to ${state}`)
       .catch(err => this.log = err)
 
-    this.wow.join.on(({ id, name }) => this.clients = { ...this.clients, [id]: { name, ack: false } })
-    this.wow.leave.on(id => delete this.clients[id] && this.requestUpdate()) // no es6 way to delete
+    this.peer.join.on(({ id, name }) => this.clients = { ...this.clients, [id]: { name, ack: false } })
+    this.peer.leave.on(id => delete this.clients[id] && this.requestUpdate()) // no es6 way to delete
 
-    this.wow.propose.on(({ members, action, ack }) => this.log = `proposal ${members}`)
+    this.peer.propose.on(({ members, action, ack }) => this.log = `proposal ${members}`)
   }
 
   private propose = (event: Event) => {
@@ -35,7 +42,7 @@ export default class extends LitElement {
     const members = Object.entries(this.clients)
       .filter(([, { ack }]) => ack)
       .map(([id]) => parseInt(id))
-    this.wow.proposeGroup(...members)
+    this.peer.proposeGroup(...members)
   }
 
   render = () => html`

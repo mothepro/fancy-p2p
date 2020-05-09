@@ -28,7 +28,7 @@ export const enum State {
   READY,
 }
 
-export default class <T extends Sendable> {
+export default class <T extends Sendable = Sendable> {
 
   /** The current state. */
   readonly state: State = State.OFFLINE
