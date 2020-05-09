@@ -21,7 +21,7 @@ export default class extends LitElement {
 
   firstUpdated() {
     this.wow.stateChange
-      .on(state => this.log = `state changed ${state}`)
+      .on(state => this.log = `State changed ${state}`)
       .catch(err => this.log = err)
 
     this.wow.join.on(({ id, name }) => this.clients = { ...this.clients, [id]: { name, ack: false } })

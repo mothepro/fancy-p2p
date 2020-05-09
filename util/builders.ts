@@ -1,4 +1,5 @@
-import { LobbyID, Name, Size, ClientID } from '@mothepro/signaling-lobby'
+import type { LobbyID, Name, ClientID } from '@mothepro/signaling-lobby'
+import { Size } from '../util/constants.js'
 
 /* Create ArrayBuffers to send to client and server. */
 

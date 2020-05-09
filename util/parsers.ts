@@ -1,5 +1,5 @@
-
-import { ClientID, Size, Code } from '@mothepro/signaling-lobby'
+import type { ClientID } from '@mothepro/signaling-lobby'
+import { Size, Code } from '../util/constants.js'
 import { MessageType } from './builders.js'
 
 /* Parse ArrayBuffers to sent from server to us. */
@@ -78,6 +78,6 @@ export function parseSdp(data: DataView) {
         sdp: decoder.decode(data.buffer.slice(Size.SHORT + Size.CHAR)),
       }
     }
-  
+
   throw Error(`Expected a SDP message, but got ${data}`)
 }

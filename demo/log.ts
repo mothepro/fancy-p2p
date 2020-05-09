@@ -1,4 +1,4 @@
-import { LitElement, html, customElement, property } from 'lit-element'
+import { LitElement, html, customElement, property, css } from 'lit-element'
 
 @customElement('lit-log')
 export default class extends LitElement {
@@ -8,10 +8,15 @@ export default class extends LitElement {
   @property()
   private entry: any
 
+  readonly styles = css`
+    .error {
+      color: red
+    }
+  `
+
   updated(attrs: Map<string, string>) {
     if (attrs.has('entry') && this.entry && this.entry != attrs.get('entry'))
-      this.entries = [...this.entries, { entry: this.entry, date: new Date }]
-    console.log(this.entries)
+      this.entries = [{ entry: this.entry, date: new Date }, ...this.entries]
   }
 
   render = () => html`
@@ -21,11 +26,12 @@ export default class extends LitElement {
     ${this.entries.map(({ date, entry }) => html`
       <pre
         title="${date.toLocaleTimeString()}"
-        .style=${ entry instanceof Error ? 'color: red' : undefined}
-      >${entry instanceof Error
-          ? entry.stack
-          : entry}
-      </pre>`)}
+        class=${entry instanceof Error ? 'error' : ''}
+      >${
+      entry instanceof Error
+        ? entry.stack
+        : entry
+      }</pre>`)}
   </details>
   `
 }

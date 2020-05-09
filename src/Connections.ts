@@ -1,6 +1,7 @@
 import { SafeEmitter, Emitter, SingleEmitter, SafeListener } from 'fancy-emitter'
-import Connection, { State as RTCState } from '@mothepro/ez-rtc'
-import { ClientID, Name, LobbyID, Max } from '@mothepro/signaling-lobby'
+import Connection from '@mothepro/ez-rtc'
+import type { ClientID, Name, LobbyID } from '@mothepro/signaling-lobby'
+import { Max } from '../util/constants.js'
 import rng from './random.js'
 import Signaling from './Signaling.js'
 
@@ -135,7 +136,8 @@ export default class <T extends Sendable> {
 
       // Ready promise should resolve once connceted
       conn.statusChange
-        .on(state => state == RTCState.CONNECTED && ready.activate())
+        // `CONNECTED` state. https://github.com/mothepro/ez-rtc/blob/b9fd271f1f7a76dc9b1208bd1e8c082f16230182/index.ts#L23
+        .on(state => state == 4 && ready.activate())
         .catch(ready.deactivate)
 
       // Save the functions to utilze this connection
