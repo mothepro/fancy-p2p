@@ -1,5 +1,6 @@
 import { LitElement, html, customElement, property } from 'lit-element'
 import Wow from '../index.js'
+import './log.js'
 
 const params = new URLSearchParams(location.search)
 
@@ -8,8 +9,8 @@ export default class extends LitElement {
   @property({ attribute: false, type: Object })
   private clients: { [key: number]: { name: string, ack: boolean } } = {}
 
-  @property({ attribute: false, type: Array })
-  private logs: string[] = []
+  @property({ attribute: false, type: String })
+  private log: any = 'Ready'
 
   private readonly wow = new Wow(
     `ws://localhost:${parseInt(params.get('port')!)}`,
@@ -19,19 +20,14 @@ export default class extends LitElement {
     params.get('name')!)
 
   firstUpdated() {
-    this.wow.stateChange.on(state => this.log('state changed', state))
+    this.wow.stateChange
+      .on(state => this.log = `state changed ${state}`)
+      .catch(err => this.log = err)
 
     this.wow.join.on(({ id, name }) => this.clients = { ...this.clients, [id]: { name, ack: false } })
     this.wow.leave.on(id => delete this.clients[id] && this.requestUpdate()) // no es6 way to delete
 
-    this.wow.propose.on(({ members, action, ack }) => this.log('proposal', members))
-  }
-
-  private log(...data: any[]) {
-    this.logs = [
-      ...this.logs,
-      data.map(x => JSON.stringify(x)).join('\t')
-    ]
+    this.wow.propose.on(({ members, action, ack }) => this.log = `proposal ${members}`)
   }
 
   private propose = (event: Event) => {
@@ -66,11 +62,8 @@ export default class extends LitElement {
       ?disabled=${!Object.values(this.clients).filter(({ ack }) => ack).length}
     />
   </form>
-    <br/><br/>
+  <br/>
 
-  <details>
-    <summary>Log</summary>
-    ${this.logs.map(val => html`<pre>${val}</pre>`)}
-  </details>
+  <lit-log .entry=${this.log}></lit-log>
   `
 }
