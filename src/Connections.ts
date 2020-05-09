@@ -33,7 +33,7 @@ export default class <T extends Sendable = Sendable> {
   /** The current state. */
   readonly state: State = State.OFFLINE
 
-  /** Activated when the state changes. */
+  /** Activated when the state changes, Cancels when finalized, Deactivates when error is throw.*/
   readonly stateChange = new Emitter<State>(newState => (this.state as State) = newState)
 
   /** Generator for random integers that will be consistent across connections within [-2 ** 31, 2 ** 31). */
@@ -95,6 +95,7 @@ export default class <T extends Sendable = Sendable> {
     // Bind states across classes
     this.server.ready.once(() => this.stateChange.activate(State.LOBBY))
     this.server.groupFinal.once(() => this.stateChange.activate(State.LOADING))
+    this.server.close.once(this.stateChange.cancel).catch(this.stateChange.deactivate)
 
     // Bind Emitters
     this.join = this.server.join
@@ -166,6 +167,6 @@ export default class <T extends Sendable = Sendable> {
     // Every connection is connected
     await Promise.all(allReady)
     this.stateChange.activate(State.READY)
-    this.server.close()
+    this.server.close.activate()
   }
 }

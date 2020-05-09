@@ -8,7 +8,7 @@ export default class extends LitElement {
   @property()
   private entry: any
 
-  readonly styles = css`
+  static readonly styles = css`
     .error {
       color: red
     }

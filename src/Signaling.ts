@@ -1,4 +1,4 @@
-import { SafeSingleEmitter, SafeEmitter, Emitter } from 'fancy-emitter'
+import { SafeSingleEmitter, SingleEmitter, SafeEmitter, Emitter } from 'fancy-emitter'
 import type { ClientID, Name, LobbyID } from '@mothepro/signaling-lobby'
 import { Code } from '../util/constants.js'
 import { buildProposal, buildIntro, buildSdp } from '../util/builders.js'
@@ -23,7 +23,7 @@ interface Closer {
  */
 export default class {
 
-  private readonly server: WebSocket
+  private readonly server!: WebSocket
 
   private readonly groups: Map<string, Emitter<ClientID>> = new Map
 
@@ -52,8 +52,6 @@ export default class {
   }> = new SafeEmitter
 
   /** Activated when a group finalization message is received. */
-  // TODO cancel all other emitters?
-  // TODO deactivate on errors
   readonly groupFinal: SafeSingleEmitter<{
     code: number
     members: Map<ClientID, Opener | Closer>
@@ -123,13 +121,24 @@ export default class {
       }
   })
 
+  /** When activated connection to server is closed. */
+  // TODO cancel all other emitters?
+  // TODO deactivate on errors
+  readonly close = new SingleEmitter(
+    () => this.server.close(),
+    this.message.cancel)
+
   constructor(address: string, private readonly lobby: LobbyID, private readonly name: Name) {
-    this.server = new WebSocket(address)
-    this.server.addEventListener('open', this.ready.activate)
-    this.server.addEventListener('close', this.message.cancel)
-    this.server.addEventListener('error', ev => this.message.deactivate(Error(`Connection to Server closed unexpectedly. ${ev}`)))
-    this.server.addEventListener('message', async ({ data }) => data instanceof Blob
-      && this.message.activate(new DataView(await data.arrayBuffer())))
+    try {
+      this.server = new WebSocket(address)
+      this.server.addEventListener('open', this.ready.activate)
+      this.server.addEventListener('close', this.close.activate)
+      this.server.addEventListener('error', ev => this.close.deactivate(Error(`Connection to Server closed unexpectedly. ${ev}`)))
+      this.server.addEventListener('message', async ({ data }) => data instanceof Blob
+        && this.message.activate(new DataView(await data.arrayBuffer())))
+    } catch (err) {
+      this.close.deactivate(err)
+    }
   }
 
   // TODO make DRY with `message` switch case
@@ -138,12 +147,10 @@ export default class {
 
     if (this.groups.has(hash))
       throw Error('Can not propose a group that is already formed.')
-    
+
     const ack = new Emitter<ClientID>()
     this.groupInitiate.activate({ members, ack })
     this.groups.set(hash, ack)
     this.server.send(buildProposal(true, ...members))
   }
-
-  close = () => this.server.close()
 }

@@ -34,7 +34,15 @@ export default class extends LitElement {
     this.peer.join.on(({ id, name }) => this.clients = { ...this.clients, [id]: { name, ack: false } })
     this.peer.leave.on(id => delete this.clients[id] && this.requestUpdate()) // no es6 way to delete
 
-    this.peer.propose.on(({ members, action, ack }) => this.log = `proposal ${members}`)
+    this.peer.propose.on(({ members, action, ack }) => {
+      this.log = `proposal ${members}`
+      ack
+        .on(member => this.log = `${member} has joined ${members}`)
+        .catch(e => {
+          this.log = `Group with ${members} is closed`
+          this.log = e
+        })
+    })
   }
 
   private propose = (event: Event) => {
