@@ -1,5 +1,5 @@
 import { LitElement, html, customElement, property } from 'lit-element'
-import Peer from '../index.js'
+import Peer, { State } from '../index.js'
 import './log.js'
 
 @customElement('lit-peer')
@@ -36,9 +36,24 @@ export default class extends LitElement {
 
     this.peer.propose.on(({ members, action, ack }) => {
       this.log = `proposal ${members}`
+
       ack
-        .on(member => this.log = `${member} has joined ${members}`)
+        .on(member => this.log = `${member} has joined you & ${members}`)
         .catch(e => this.log = [`Group with ${members} is closed`, e])
+
+      if (action)
+        action(confirm(`Accept group with ${members}`))
+    })
+
+
+    this.peer.stateChange.on(state => {
+      if (state == State.READY) {
+        this.log = `our number ${this.peer.random(true)}`
+        for (const [, { name, message }] of this.peer.peers)
+          message
+            .on(data => this.log = `${name} says ${data}`)
+            .catch(e => this.log = [`Connection with ${name} closed`, e])
+      }
     })
   }
 

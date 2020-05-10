@@ -41,7 +41,7 @@ export default class <T extends Sendable = Sendable> {
 
   /** Connections, once finalized */
   // TODO replace with a simple array after grouping.
-  private readonly peers: Map<ClientID, Peer<T>> = new Map
+  readonly peers: Map<ClientID, Peer<T>> = new Map
 
   private readonly server: Signaling
 
@@ -73,7 +73,7 @@ export default class <T extends Sendable = Sendable> {
    * 
    * Throws if group has yet to be finalized.
    */
-  readonly random: (isInt: boolean) => number = (isInt = false) =>
+  readonly random: (isInt?: boolean) => number = (isInt = false) =>
     this.assert(State.READY) && isInt
       ? this.rng!.next().value
       : 0.5 + this.random(true) / Max.INT

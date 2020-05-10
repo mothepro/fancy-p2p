@@ -9,3 +9,7 @@
 ## How to Use
 
 TODO...
+
+## Roadmap
+
++ Test RTC possibility before starting server connection
