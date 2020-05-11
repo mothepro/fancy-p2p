@@ -1,11 +1,9 @@
 import { SafeEmitter, Emitter, SingleEmitter, SafeListener } from 'fancy-emitter'
-import Connection from '@mothepro/ez-rtc'
+import Connection, { State as RTCState, Sendable } from '@mothepro/ez-rtc'
 import type { ClientID, Name, LobbyID } from '@mothepro/signaling-lobby'
 import { Max } from '../util/constants.js'
 import rng from './random.js'
 import Signaling from './Signaling.js'
-
-type Sendable = string | Blob | ArrayBuffer | ArrayBufferView
 
 interface Peer<T extends Sendable> {
   name: Name
@@ -30,11 +28,10 @@ export const enum State {
 
 export default class <T extends Sendable = Sendable> {
 
-  /** The current state. */
-  readonly state: State = State.OFFLINE
+  private state = State.OFFLINE
 
   /** Activated when the state changes, Cancels when finalized, Deactivates when error is throw.*/
-  readonly stateChange = new Emitter<State>(newState => (this.state as State) = newState)
+  readonly stateChange = new Emitter<State>(newState => this.state = newState)
 
   /** Generator for random integers that will be consistent across connections within [-2 ** 31, 2 ** 31). */
   rng?: Generator<number, never, void>
@@ -137,8 +134,7 @@ export default class <T extends Sendable = Sendable> {
 
       // Ready promise should resolve once connceted
       conn.statusChange
-        // `CONNECTED` state. https://github.com/mothepro/ez-rtc/blob/b9fd271f1f7a76dc9b1208bd1e8c082f16230182/index.ts#L23
-        .on(state => state == 4 && ready.activate())
+        .on(state => state == RTCState.CONNECTED && ready.activate())
         .catch(ready.deactivate)
 
       // Save the functions to utilze this connection
