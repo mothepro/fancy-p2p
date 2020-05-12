@@ -29,6 +29,7 @@ export const enum State {
 export default class <T extends Sendable = Sendable> {
 
   private state = State.OFFLINE
+  private readonly server: Signaling
 
   /** Activated when the state changes, Cancels when finalized, Deactivates when error is throw.*/
   readonly stateChange = new Emitter<State>(newState => this.state = newState)
@@ -39,8 +40,6 @@ export default class <T extends Sendable = Sendable> {
   /** Connections, once finalized */
   // TODO replace with a simple array after grouping.
   readonly peers: Map<ClientID, Peer<T>> = new Map
-
-  private readonly server: Signaling
 
   /** Activated when a client join message is received. */
   // TODO hide ClientID
@@ -75,9 +74,9 @@ export default class <T extends Sendable = Sendable> {
       ? this.rng!.next().value
       : 0.5 + this.random(true) / Max.INT
 
-  protected assert(...validStates: State[]) {
-    if (!new Set(validStates).has(this.state))
-      throw Error(`Expected state to be ${validStates} but was ${this.state}`)
+  protected assert(valid: State) {
+    if (this.state != valid)
+      throw Error(`Expected state to be ${valid} but was ${this.state}`)
     return true
   }
 
