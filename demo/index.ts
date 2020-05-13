@@ -1,6 +1,6 @@
 import { LitElement, html, customElement, property } from 'lit-element'
-import { signaling, stuns } from './dev-server-config.json'
-import Peer, { State } from '../index.js'
+import type Client from '../src/Client.js'
+import Peer from '../index.js'
 import './log.js'
 
 @customElement('lit-peer')

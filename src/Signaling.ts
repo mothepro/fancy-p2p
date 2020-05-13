@@ -132,7 +132,7 @@ export default class {
   proposeGroup(...members: Client[]) {
     const ids: HashableSet<ClientID> = new HashableSet
 
-    // TODO improve this
+    // TODO improve this??
     for (const [id, client] of this.allClients)
       if (members.includes(client))
         ids.add(id)
