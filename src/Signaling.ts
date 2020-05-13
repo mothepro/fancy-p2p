@@ -1,4 +1,4 @@
-import { SafeSingleEmitter, SafeEmitter, Emitter } from 'fancy-emitter'
+import { SafeSingleEmitter, SingleEmitter, SafeEmitter, Emitter } from 'fancy-emitter'
 import type { ClientID, Name, LobbyID } from '@mothepro/signaling-lobby'
 import { parseGroupFinalize, parseGroupChange, parseClientLeave, parseClientJoin, parseSdp } from '../util/parsers.js'
 import { buildProposal, buildIntro, buildSdp } from '../util/builders.js'
@@ -24,23 +24,11 @@ export default class {
 
   private readonly groups: Map<string, Emitter<Client>> = new Map
 
-  /** Closes connection to server. */
-  readonly close = () => this.server.close()
-
   /** Activated when our connection to signaling server is established. */
   readonly ready = new SafeSingleEmitter(() => this.server.send(buildIntro(this.lobby, this.name)))
 
-  /** Activated when anyone initiates a new group. */
-  readonly initiator: SafeEmitter<{
-    /** The client who proposed this group. not present if you created the group */
-    client?: Client
-    /** The members in this group. */
-    members: Client[]
-    /** Function to accept or reject the group, not present if you created the group */
-    action?(accept: boolean): void
-    /** Activated with the Client who just accepted the group proposal. Deactivates when someone rejects. */
-    ack: Emitter<Client>
-  }> = new SafeEmitter
+  /** Connection with server should close */
+  readonly close = new SingleEmitter(() => this.server.close())
 
   readonly finalized: SafeSingleEmitter<{
     code: number
@@ -48,16 +36,17 @@ export default class {
   }> = new SafeSingleEmitter
 
   /** Activated when a new client joins the lobby. */
-  readonly join: SafeEmitter<Client> = new SafeEmitter
+  readonly connection: SafeEmitter<Client> = new SafeEmitter
 
   /**
    * Activates when receiving some data from the signaling server.
    * Deactivates on connection error.
    * Cancels when connection ends gracefully.
    */
-  private readonly message = new Emitter<DataView>(data => {
+  private readonly message = new SafeEmitter<DataView>(data => {
     try {
       if (this.finalized.triggered) {
+        // Accept the SDP from the client after they have created.
         const { from, sdp } = parseSdp(data)
         this.getClient(from).acceptor.activate(sdp)
       } else
@@ -65,15 +54,13 @@ export default class {
           case Code.CLIENT_JOIN:
             const { id, name } = parseClientJoin(data),
               client = new Client(id, name)
-            this.join.activate(client)
+            this.connection.activate(client)
             this.allClients.set(id, client)
 
             // Clean up on disconnect
             client.disconnect.once(() => this.allClients.delete(id))
-            // Send SDP when creating
+            // DM the SDP for the client after creation
             client.creator.once(sdp => this.server.send(buildSdp(id, sdp)))
-            // Activate the global initiator when a client initiates a group
-            client.initiator.on(data => this.initiator.activate({...data, client}))
             break
 
           case Code.CLIENT_LEAVE:
@@ -115,26 +102,34 @@ export default class {
             return
         }
     } catch (err) {
-      this.message.deactivate(err)
+      this.close.deactivate(err)
+      this.server.close()
     }
   })
 
+  /** Attempts to get a client that has connected. Throws if unable to. */
+  private getClient(id: ClientID) {
+    if (!this.allClients.has(id))
+      throw Error(`Received data from unknown client ${id}.`)
+    return this.allClients.get(id)!
+  }
 
   constructor(address: string, private readonly lobby: LobbyID, private readonly name: Name) {
     try {
       this.server = new WebSocket(address)
       this.server.addEventListener('open', this.ready.activate)
-      this.server.addEventListener('close', this.message.cancel)
-      this.server.addEventListener('error', ev => this.message.deactivate(Error(`Connection to Server closed unexpectedly. ${ev}`)))
+      this.server.addEventListener('close', this.close.activate)
+      this.server.addEventListener('error', ev => this.close.deactivate(Error(`Connection to Server closed unexpectedly. ${ev}`)))
       this.server.addEventListener('message', async ({ data }) => data instanceof Blob
         && this.message.activate(new DataView(await data.arrayBuffer())))
     } catch (err) {
-      this.message.deactivate(err)
+      this.close.deactivate(err)
+      if (this.server)
+        this.server.close()
     }
   }
 
-  // TODO make DRY with `message` switch case
-  proposeGroup = (...members: Client[]) => {
+  proposeGroup(...members: Client[]) {
     const ids: HashableSet<ClientID> = new HashableSet
 
     // TODO improve this
@@ -144,20 +139,15 @@ export default class {
 
     if (this.groups.has(ids.hash))
       throw Error('Can not propose a group that is already formed.')
-      
-      if (ids.size < 1)
-      throw Error('Can not propose a group without members.')
-      
-    const ack = new Emitter<Client>()
-    this.initiator.activate({ members, ack })
-    this.groups.set(ids.hash, ack)
-    this.server.send(buildProposal(true, ...ids))
-  }
 
-  /** Attempts to get a client that has connected. Throws if unable to. */
-  private getClient(id: ClientID) {
-    if (!this.allClients.has(id))
-      throw Error(`Received data from unknown client ${id}.`)
-    return this.allClients.get(id)!
+    if (ids.size < 1)
+      throw Error('Can not propose a group without members.')
+
+    this.server.send(buildProposal(true, ...ids))
+
+    // Return the emitter that will be used by the cliehts
+    const ack = new Emitter<Client>()
+    this.groups.set(ids.hash, ack)
+    return ack
   }
 }

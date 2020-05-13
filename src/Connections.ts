@@ -1,15 +1,10 @@
 import { SafeEmitter, Emitter, SingleEmitter, SafeListener } from 'fancy-emitter'
 import Connection, { State as RTCState, Sendable } from '@mothepro/ez-rtc'
-import type { ClientID, Name, LobbyID } from '@mothepro/signaling-lobby'
+import type { Name, LobbyID } from '@mothepro/signaling-lobby'
 import { Max } from '../util/constants.js'
 import rng from './random.js'
 import Signaling from './Signaling.js'
-
-interface Peer<T extends Sendable> {
-  name: Name
-  send(data: T): void
-  message: SafeEmitter<T>
-}
+import Client from './Client.js'
 
 /** Represent where we are in the process of connecting to some peers. */
 export const enum State {
@@ -38,30 +33,35 @@ export default class <T extends Sendable = Sendable> {
   rng?: Generator<number, never, void>
 
   /** Connections, once finalized */
-  // TODO replace with a simple array after grouping.
-  readonly peers: Map<ClientID, Peer<T>> = new Map
-
-  /** Activated when a client join message is received. */
-  // TODO hide ClientID
-  readonly join: SafeListener<{
-    id: ClientID
+  readonly peers: Set<{
+    /** Name of the new peer. */
     name: Name
-  }>
+    /** Function to send data to activate the `message` Emitter for the peer. */
+    send(data: T): void
+    /** Activates when a message is received for this peer. */
+    message: SafeEmitter<T>
+  }> = new Set
 
-  /** Activated when a client leave message is received. */
-  // TODO hide ClientID
-  readonly leave: SafeListener<ClientID>
+  /** Activated when a client joins the lobby. */
+  readonly connection: SafeListener<Client>
 
-  /** Activated when a group proposal/ack message is received. */
-  // TODO hide ClientID
-  readonly propose: SafeListener<{
-    /** The members in this group */
-    members: ClientID[]
-    /** Function to accept or reject the group, not included if you created the group */
+  /** Activated when anyone initiates a new group. */
+  readonly initiator: SafeEmitter<{
+    /** The client who proposed this group. not present if you created the group */
+    client?: Client
+    /** The members in this group. */
+    members: Client[]
+    /** Function to accept or reject the group, not present if you created the group */
     action?(accept: boolean): void
-    /** The id of client just accepted the group. Cancelled when someone rejects. */
-    ack: Emitter<ClientID>
-  }>
+    /** Activated with the Client who just accepted the group proposal. Deactivates when someone rejects. */
+    ack: Emitter<Client>
+  }> = new SafeEmitter
+
+  protected assert(valid: State) {
+    if (this.state != valid)
+      throw Error(`Expected state to be ${valid} but was ${this.state}`)
+    return true
+  }
 
   /**
    * Generates a random number in [0,1). Same as Math.random()
@@ -69,16 +69,18 @@ export default class <T extends Sendable = Sendable> {
    * 
    * Throws if group has yet to be finalized.
    */
-  readonly random: (isInt?: boolean) => number = (isInt = false) =>
-    this.assert(State.READY) && isInt
+  readonly random: (isInt?: boolean) => number = (isInt = false) => this.assert(State.READY)
+    && isInt
       ? this.rng!.next().value
       : 0.5 + this.random(true) / Max.INT
 
-  protected assert(valid: State) {
-    if (this.state != valid)
-      throw Error(`Expected state to be ${valid} but was ${this.state}`)
-    return true
-  }
+  /** Propose a group with other clients connected to this lobby. */
+  readonly proposeGroup = (...members: Client[]) => this.assert(State.LOBBY)
+    && this.initiator.activate({ members, ack: this.server.proposeGroup(...members) })
+
+  /** Send data to all connected peers. */
+  readonly broadcast = (data: T) => this.assert(State.READY)
+    && [...this.peers].map(({ send }) => send(data))
 
   constructor(
     server: string,
@@ -90,41 +92,29 @@ export default class <T extends Sendable = Sendable> {
 
     // Bind states across classes
     this.server.ready.once(() => this.stateChange.activate(State.LOBBY))
-    this.server.groupFinal.once(() => this.stateChange.activate(State.LOADING))
-    this.server.close.once(this.stateChange.cancel).catch(this.stateChange.deactivate)
+    this.server.finalized.once(() => this.stateChange.activate(State.LOADING))
 
     // Bind Emitters
-    this.join = this.server.join
-    this.leave = this.server.leave
-    this.propose = this.server.groupInitiate
-
-    // Bind join's and group finalization
-    this.bindSignaling()
+    this.connection = this.server.connection
+    this.bindClient()
+    this.bindFinalization()
+    this.bindClose()
   }
 
-  proposeGroup(...ids: ClientID[]) {
-    this.assert(State.LOBBY)
-    this.server.proposeGroup(...ids)
+  private async bindClient() {
+    for await (const client of this.connection)
+      // Bind the client `initiator`s to this `initiator`
+      client.initiator.on(data => this.initiator.activate({ ...data, client }))
   }
 
-  broadcast(data: T) {
-    this.assert(State.READY)
-    for (const [, { send }] of this.peers)
-      send(data)
-  }
-
-  private async bindSignaling() {
-    const names: Map<ClientID, Name> = new Map
-    this.server.join.on(({ id, name }) => names.set(id, name))
-    // this.server.leave.on(id => names.delete(id))
-
+  private async bindFinalization() {
     const allReady = [],
-      { code, members } = await this.server.groupFinal.event
+      { code, members } = await this.server.finalized.event
 
     // Seed RNG
     this.rng = rng(code)
 
-    for (const [id, fns] of members) {
+    for (const client of members) {
       const conn = new Connection(this.stuns),
         ready = new SingleEmitter
 
@@ -137,31 +127,43 @@ export default class <T extends Sendable = Sendable> {
         .catch(ready.deactivate)
 
       // Save the functions to utilze this connection
-      this.peers.set(id, {
-        name: names.get(id)!,
+      this.peers.add({
+        name: client.name,
         send: (data) => conn.send(data),
-        // @ts-ignore TODO fix this
+        // @ts-ignore This cast should be okay
         message: conn.message,
       })
 
-      // We are an opener
-      if ('createOffer' in fns && 'acceptAnswer' in fns)
-        (async () => { // don't want to block entire loop on this
-          fns.createOffer(await conn.createOffer())
-          conn.acceptSDP(await fns.acceptAnswer)
-        })()
-
-      // We are an closer
-      if ('acceptOffer' in fns && 'createAnswer' in fns)
-        (async () => { // don't want to block entire loop on this
-          conn.acceptSDP(await fns.acceptOffer)
-          fns.createAnswer(await conn.createAnswer())
-        })()
+      // Openers should create offer -> accept answer
+      try {
+        if (await client.isOpener.event) {
+          client.creator.activate(await conn.createOffer())
+          conn.acceptSDP(await client.acceptor.event)
+        } else { // Closers should accept offter -> create answer
+          conn.acceptSDP(await client.acceptor.event)
+          client.creator.activate(await conn.createAnswer())
+        }
+      } catch (err) {
+        this.stateChange.deactivate(err)
+      }
     }
 
-    // Every connection is connected
-    await Promise.all(allReady)
-    this.stateChange.activate(State.READY)
+    // Every connection is connected successfully
+    try {
+      await Promise.all(allReady)
+      this.stateChange.activate(State.READY)
+    } catch (err) {
+      this.stateChange.deactivate(err)
+    }
     this.server.close.activate()
+  }
+
+  private async bindClose() {
+    // Make sure to deactivate the `stateChange` if the server close deactivates.
+    try {
+      await this.server.close
+    } catch (err) {
+      this.stateChange.deactivate(err)
+    }
   }
 }
