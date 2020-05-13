@@ -12,10 +12,10 @@ const decoder = new TextDecoder
  * Unfortunately, Buffer -> UInt16Array is not WAI.
  *  Also, do not rely on the underlying ArrayBuffer `data.buffer`, socket may modify it...
  */
-export function parseClientIds(offset: number, data: DataView): ClientID[] {
-  const ids = []
+export function parseClientIds(offset: number, data: DataView) {
+  const ids: Set<ClientID> = new Set
   for (let i = offset; i < data.byteLength; i += Size.SHORT)
-    ids.push(data.getUint16(i, true))
+    ids.add(data.getUint16(i, true))
   return ids
 }
 
