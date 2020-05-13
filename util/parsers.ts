@@ -1,6 +1,7 @@
 import type { ClientID } from '@mothepro/signaling-lobby'
 import { Size, Code } from '../util/constants.js'
 import { MessageType } from './builders.js'
+import HashableSet from './HashableSet.js'
 
 /* Parse ArrayBuffers to sent from server to us. */
 
@@ -13,7 +14,7 @@ const decoder = new TextDecoder
  *  Also, do not rely on the underlying ArrayBuffer `data.buffer`, socket may modify it...
  */
 export function parseClientIds(offset: number, data: DataView) {
-  const ids: Set<ClientID> = new Set
+  const ids: HashableSet<ClientID> = new HashableSet
   for (let i = offset; i < data.byteLength; i += Size.SHORT)
     ids.add(data.getUint16(i, true))
   return ids
