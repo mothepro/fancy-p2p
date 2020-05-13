@@ -7,9 +7,6 @@ export default class extends LitElement {
   @property({ type: Number })
   private port!: number
 
-  @property({ type: Number })
-  private lobby!: number
-
   @property({ type: String })
   private name!: string
 
@@ -25,7 +22,7 @@ export default class extends LitElement {
     this.peer = new Peer(
       `ws://localhost:${this.port}`,
       ['stun:stun.l.google.com:19302'],
-      this.lobby, this.name)
+      0, this.name)
 
     this.peer.stateChange
       .on(state => this.log = `State changed to ${state}`)
