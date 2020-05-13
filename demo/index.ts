@@ -1,4 +1,5 @@
 import { LitElement, html, customElement, property } from 'lit-element'
+import { signaling, stuns } from './dev-server-config.json'
 import Peer, { State } from '../index.js'
 import './log.js'
 
@@ -19,10 +20,7 @@ export default class extends LitElement {
   private peer!: Peer
 
   firstUpdated() {
-    this.peer = new Peer(
-      `ws://localhost:${this.port}`,
-      ['stun:stun.l.google.com:19302'],
-      0, this.name)
+    this.peer = new Peer(signaling, stuns, 0, this.name)
 
     this.peer.stateChange
       .on(state => this.log = `State changed to ${state}`)
