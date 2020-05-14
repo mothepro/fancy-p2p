@@ -3,7 +3,7 @@ import type { ClientID, Name, LobbyID } from '@mothepro/signaling-lobby'
 import { parseGroupFinalize, parseGroupChange, parseClientLeave, parseClientJoin, parseSdp } from '../util/parsers.js'
 import { buildProposal, buildIntro, buildSdp } from '../util/builders.js'
 import { Code } from '../util/constants.js'
-import Client from './Client.js'
+import Client, { SimpleClient } from './Client.js'
 import ClientError from '../util/ClientError.js'
 import HashableSet from '../util/HashableSet.js'
 
@@ -22,7 +22,7 @@ export default class {
   /** Map of all clients connected to this signaling server. */
   private readonly allClients: Map<ClientID, Client> = new Map
 
-  private readonly groups: Map<string, Emitter<Client>> = new Map
+  private readonly groups: Map<string, Emitter<SimpleClient>> = new Map
 
   /** Activated when our connection to signaling server is established. */
   readonly ready = new SafeSingleEmitter(() => this.server.send(buildIntro(this.lobby, this.name)))
@@ -128,8 +128,9 @@ export default class {
         this.server.close()
     }
   }
-
-  proposeGroup(...members: Client[]) {
+  
+  /** Proposes a group to the server and returns the emitter that will be activated when clients accept it. */
+  proposeGroup(...members: SimpleClient[]) {
     const ids: HashableSet<ClientID> = new HashableSet
 
     // TODO improve this??
@@ -144,10 +145,8 @@ export default class {
       throw Error('Can not propose a group without members.')
 
     this.server.send(buildProposal(true, ...ids))
+    this.groups.set(ids.hash, new Emitter)
 
-    // Return the emitter that will be used by the cliehts
-    const ack = new Emitter<Client>()
-    this.groups.set(ids.hash, ack)
-    return ack
+    return this.groups.get(ids.hash)!
   }
 }

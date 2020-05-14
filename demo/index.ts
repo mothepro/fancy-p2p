@@ -1,5 +1,5 @@
 import { LitElement, html, customElement, property } from 'lit-element'
-import type Client from '../src/Client.js'
+import type { SimpleClient } from '../src/Client.js'
 import Peer from '../index.js'
 import './log.js'
 

@@ -1,19 +1,33 @@
-import { SafeEmitter, Emitter, SafeSingleEmitter, SingleEmitter } from 'fancy-emitter'
+import { SafeEmitter, SafeListener, Emitter, SafeSingleEmitter, SingleEmitter } from 'fancy-emitter'
 import type { ClientID, Name } from '@mothepro/signaling-lobby'
 
 /** Represents another client in the same lobby and signaling server as we are. */
-export default class Client {
+export interface SimpleClient {
+  /** Name of this client. */
+  readonly name: Name
+
   /** Activated when this client leaves. */
-  readonly disconnect = new SingleEmitter
+  readonly disconnect: SingleEmitter
 
   /** Activated when a initiating a new group. */
-  readonly initiator: SafeEmitter<{
+  readonly initiator: SafeListener<{
     /** The other members in this group, including me. */
-    members: Client[]
+    members: SimpleClient[]
     /** Function to accept or reject the group, not present if you created the group */
     action(accept: boolean): void
     /** Activated with the Client who just accepted the group proposal. Deactivates when someone rejects. */
-    ack: Emitter<Client>
+    ack: Emitter<SimpleClient>
+  }>
+}
+
+/** Represents another client in the same lobby and signaling server as we are that can preform SDP exchange. */
+export default class implements SimpleClient {
+  readonly disconnect = new SingleEmitter
+
+  readonly initiator: SafeEmitter<{
+    members: SimpleClient[]
+    action(accept: boolean): void
+    ack: Emitter<SimpleClient>
   }> = new SafeEmitter
 
   /**
@@ -31,8 +45,5 @@ export default class Client {
   // TODO doesn't need to be exposed as an emitter
   readonly acceptor: SafeSingleEmitter<RTCSessionDescriptionInit> = new SafeSingleEmitter
 
-  constructor(
-    private readonly id: ClientID,
-    /** Name of this client. */
-    readonly name: Name) { }
+  constructor(private readonly id: ClientID, readonly name: Name) { }
 }
