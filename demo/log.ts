@@ -9,6 +9,10 @@ export default class extends LitElement {
   private entry: any
 
   static readonly styles = css`
+    :host {
+      display: block;
+      margin: 1em
+    }
     .error {
       color: red
     }
@@ -32,11 +36,10 @@ export default class extends LitElement {
       <pre
         title="${date.toLocaleTimeString()}"
         class=${entry instanceof Error ? 'error' : ''}
-      >${
-      entry instanceof Error
-        ? entry.stack
-        : entry
-      }</pre>`)}
+      >${entry instanceof Error
+      ? entry.stack ? entry.stack : entry.message // Stack isn't always available
+      : entry
+    }</pre>`)}
   </details>
   `
 }

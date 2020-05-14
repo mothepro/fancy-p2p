@@ -74,13 +74,21 @@ export default class {
             if (approve) {
               // Initiate the group if it hasn't been propopsed before
               if (!this.groups.has(members.hash)) {
+                // Used to keep track of clients when they accept or reject
+                this.groups.set(members.hash, new Emitter)
+                // Initiate on behalf of the client
                 this.getClient(actor).initiator.activate({
                   members: [...members].map(this.getClient),
                   ack: this.groups.get(members.hash)!,
-                  action: (accept) => this.server.send(buildProposal(accept, ...members))
+                  action: (accept) => {
+                    this.server.send(buildProposal(accept, ...members))
+                    // Make DRY with switch
+                    if (!accept) {
+                      this.groups.get(members.hash)?.deactivate(new ClientError(`Group with ${members} was rejected.`))
+                      this.groups.delete(members.hash)
+                    }
+                  }
                 })
-                // Keep track of clients when they accept or reject
-                this.groups.set(members.hash, new Emitter)
               }
               // TODO decide if that should be in an else
               this.groups.get(members.hash)!.activate(this.getClient(actor))
@@ -108,7 +116,7 @@ export default class {
   })
 
   /** Attempts to get a client that has connected. Throws if unable to. */
-  private getClient(id: ClientID) {
+  private readonly getClient = (id: ClientID) => {
     if (!this.allClients.has(id))
       throw Error(`Received data from unknown client ${id}.`)
     return this.allClients.get(id)!

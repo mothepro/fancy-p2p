@@ -3,8 +3,10 @@ import Connection, { State as RTCState, Sendable } from '@mothepro/ez-rtc'
 import type { Name, LobbyID } from '@mothepro/signaling-lobby'
 import type { SimpleClient } from './src/Client.js'
 import { Max } from './util/constants.js'
-import rng from './src/random.js'
+import rng from './util/random.js'
 import Signaling from './src/Signaling.js'
+
+export { default as ClientError } from './util/ClientError.js'
 
 /** Represent where we are in the process of connecting to some peers. */
 export const enum State {
@@ -35,11 +37,9 @@ export default class <T extends Sendable = Sendable> {
     name: Name
     /** Function to send data to activate the `message` Emitter for the peer. */
     send(data: T): void
-    /** Activates when a message is received for this peer. */
-    message: SafeEmitter<T>
-  }>> = new SafeSingleEmitter(
-    () => this.stateChange.activate(State.READY).cancel(),
-    () => this.server.close.activate)
+    /** Activates when a message is received for this peer. Cancels once the connection is closed. */
+    message: Emitter<T>
+  }>> = new SafeSingleEmitter(() => this.stateChange.activate(State.READY))
 
   /** Generator for random integers that will be consistent across connections within [-2 ** 31, 2 ** 31). */
   rng?: Generator<number, never, void>
@@ -77,11 +77,11 @@ export default class <T extends Sendable = Sendable> {
       : 0.5 + this.random(true) / Max.INT
 
   /** Propose a group with other clients connected to this lobby. */
-  readonly proposeGroup = (...members: SimpleClient[]) => this.assert(State.LOBBY)
+  readonly proposeGroup: (...members: SimpleClient[]) => void = (...members) => this.assert(State.LOBBY)
     && this.initiator.activate({ members, ack: this.server.proposeGroup(...members) })
 
   /** Send data to all connected peers. */
-  readonly broadcast = async (data: T) => this.assert(State.READY)
+  readonly broadcast: (data: T) => void = data => this.assert(State.READY)
     && this.ready.once(peers => [...peers].map(({ send }) => send(data)))
 
   constructor(
@@ -123,6 +123,7 @@ export default class <T extends Sendable = Sendable> {
 
     for (const client of members) {
       const conn = new Connection(this.stuns),
+        message: Emitter<T> = new Emitter,
         ready = new SingleEmitter
 
       // Save this ready promise
@@ -130,15 +131,30 @@ export default class <T extends Sendable = Sendable> {
 
       // Ready promise should resolve once connceted
       conn.statusChange
-        .on(state => state == RTCState.CONNECTED && ready.activate())
-        .catch(ready.deactivate)
+        .on(state => {
+          switch (state) {
+            case RTCState.CONNECTED:
+              ready.activate()
+              break
+            
+            case RTCState.OFFLINE:
+              message.cancel()
+              break
+          }
+        })
+        .catch(err => {
+          ready.deactivate(err)
+          message.deactivate(err)
+        })
+
+      // @ts-ignore This cast should be okay
+      conn.message.on(message.activate)
 
       // Save the functions to utilze this connection
       peers.add({
         name: client.name,
         send: (data) => conn.send(data),
-        // @ts-ignore This cast should be okay
-        message: conn.message,
+        message,
       })
 
       // Openers should create offer -> accept answer
@@ -155,10 +171,13 @@ export default class <T extends Sendable = Sendable> {
       }
     }
 
-    // Every connection is connected successfully
+    // Every connection is connected successfully, ready up & close connection with server
     try {
+      // TODO timeout if this takes too long
       await Promise.all(allReady)
+      this.stateChange.activate(State.READY)
       this.ready.activate(peers)
+      this.server.close.activate()
     } catch (err) {
       this.stateChange.deactivate(err)
     }

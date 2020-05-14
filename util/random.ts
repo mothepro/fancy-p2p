@@ -1,4 +1,4 @@
-import { Max } from '../util/constants.js'
+import { Max } from './constants.js'
 
 /**
  * Yields a random integer using Multiply with carry PRNG within [-2 ** 31, 2 ** 31).
