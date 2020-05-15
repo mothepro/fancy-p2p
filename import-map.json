@@ -1,0 +1,11 @@
+{
+  "imports": {
+    "@mothepro/ez-rtc/": "https://unpkg.com/@mothepro/ez-rtc@0.0.4/",
+    "@mothepro/ez-rtc": "https://unpkg.com/@mothepro/ez-rtc@0.0.4/dist/esm/index.js",
+    "lit-element/": "//unpkg.com/lit-element@2.2.1/",
+    "lit-element": "//unpkg.com/lit-element@2.2.1/lit-element.js",
+    "lit-html/": "//unpkg.com/lit-html@1.1.2/",
+    "lit-html": "//unpkg.com/lit-html@1.1.2/lit-html.js",
+    "fancy-emitter": "//unpkg.com/fancy-emitter@1.3.6/dist/esm/index.js"
+  }
+}
