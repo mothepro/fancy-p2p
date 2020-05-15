@@ -1,5 +1,6 @@
 import { LitElement, html, customElement, property } from 'lit-element'
 import type { SimpleClient } from '../src/Client.js'
+import { signaling, stuns } from './dev-server-config.json'
 import ClientError from '../util/ClientError.js'
 import P2P from '../index.js'
 import './log.js'
@@ -32,7 +33,7 @@ export default class extends LitElement {
   private p2p!: P2P
 
   firstUpdated() {
-    this.peer = new Peer(signaling, stuns, 0, this.name)
+    this.p2p = new P2P(signaling, stuns, 0, this.name)
 
     this.p2p.stateChange
       .on(state => this.log = `State changed to ${state}`)
@@ -73,13 +74,11 @@ export default class extends LitElement {
   }
 
   private async bindReady() {
-    const peers = await this.p2p.ready.event
-
-    for (const { name, message } of peers)
+    for (const { name, message } of await this.p2p.ready.event)
       message
-        .on(data => data instanceof ArrayBuffer
+        .on(data => data instanceof ArrayBuffer && data.byteLength == 1
           ? this.log = `A shared random number for us is ${this.p2p.random(true)}`
-          : this.log = `${name} says ${data}`)
+          : this.log = `${name} says "${data}"`)
         .catch(err => this.log = [`Connection with ${name} closed`, err])
   }
 
