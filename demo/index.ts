@@ -73,10 +73,7 @@ export default class extends LitElement {
   }
 
   private async bindReady() {
-    console.log('binding', await this.p2p.stateChange.next) // hmmmmm
     const peers = await this.p2p.ready.event
-    this.p2p.stateChange.once(state => console.log('once readty', state)) // hmmmmm
-    console.log(await this.p2p.stateChange.next, 'ready') // hmmmmm
 
     for (const { name, message } of peers)
       message
