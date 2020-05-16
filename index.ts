@@ -35,7 +35,7 @@ export default class <T extends Sendable = Sendable> {
   readonly stateChange = new Emitter<State>(newState => this.state = newState)
 
   /** Shortcut to the peers being available. */
-  readonly ready = new SafeSingleEmitter<ReadonlySet<SimplePeer<T>>>(() => this.stateChange.activate(State.READY))
+  readonly ready = new SafeSingleEmitter<ReadonlyArray<SimplePeer<T>>>(() => this.stateChange.activate(State.READY))
 
   /** Generator for random integers that will be consistent across connections within [-2 ** 31, 2 ** 31). */
   private rng?: Generator<number, never, void>
@@ -55,6 +55,7 @@ export default class <T extends Sendable = Sendable> {
     ack: Emitter<SimpleClient>
   }> = new SafeEmitter
 
+  // TODO allow READY state even tho the state doesn't change until the next tick
   protected assert(valid: State) {
     if (this.state != valid)
       throw Error(`Expected state to be ${valid} but was ${this.state}`)
@@ -106,13 +107,13 @@ export default class <T extends Sendable = Sendable> {
   }
 
   private async bindFinalization() {
-    const peers: Set<Peer<T>> = new Set,
+    const peers: Peer<T>[] = [],
       { code, members } = await this.server.finalized.event
 
     this.rng = rng(code)
 
     for (const client of members)
-      peers.add(new Peer(this.stuns, client))
+      peers.push(new Peer(this.stuns, client))
 
     try {
       // Every connection is connected successfully, ready up & close connection with server
@@ -128,7 +129,7 @@ export default class <T extends Sendable = Sendable> {
   private async bindServerClose() {
     try {
       await this.server.close.event
-      if (this.state != State.READY)
+      if (!this.ready.triggered)
         this.stateChange.deactivate(Error('Connection with server closed prematurely'))
     } catch (err) {
       this.stateChange.deactivate(err)
