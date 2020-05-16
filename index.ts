@@ -86,9 +86,6 @@ export default class <T extends Sendable = Sendable> {
   ) {
     this.server = new Signaling(server, lobby, name)
 
-    // Make sure to deactivate the `stateChange` if the server close deactivates.
-    this.server.close.event.catch(this.stateChange.deactivate)
-
     // Bind states across classes
     this.server.ready.once(() => this.stateChange.activate(State.LOBBY))
     this.server.finalized.once(() => this.stateChange.activate(State.LOADING))
@@ -97,6 +94,7 @@ export default class <T extends Sendable = Sendable> {
     this.connection = this.server.connection
     this.bindClient()
     this.bindFinalization()
+    this.bindServerClose()
   }
 
   private async bindClient() {
@@ -122,5 +120,16 @@ export default class <T extends Sendable = Sendable> {
       this.stateChange.deactivate(err)
     }
     this.server.close.activate()
+  }
+
+  // Make sure to deactivate the `stateChange` if the server connection closes prematurely or with an error.
+  private async bindServerClose() {
+    try {
+      await this.server.close.event
+      if (this.state != State.READY)
+        this.stateChange.deactivate(Error('Connection with server closed prematurely'))
+    } catch (err) {
+      this.stateChange.deactivate(err)
+    }
   }
 }
