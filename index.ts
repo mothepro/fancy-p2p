@@ -36,7 +36,7 @@ export default class <T extends Sendable = Sendable> {
   readonly ready = new SafeSingleEmitter<ReadonlySet<SimplePeer<T>>>(() => this.stateChange.activate(State.READY))
 
   /** Generator for random integers that will be consistent across connections within [-2 ** 31, 2 ** 31). */
-  rng?: Generator<number, never, void>
+  private rng?: Generator<number, never, void>
 
   /** Activated when a client joins the lobby. */
   readonly connection: SafeListener<SimpleClient>
