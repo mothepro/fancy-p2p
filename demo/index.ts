@@ -1,6 +1,6 @@
 import { LitElement, html, customElement, property } from 'lit-element'
 import type { SimpleClient } from '../src/Client.js'
-import { signaling, stuns } from './dev-server-config.json'
+import config from './server-config.js'
 import ClientError from '../util/ClientError.js'
 import P2P from '../index.js'
 import './log.js'
@@ -33,12 +33,17 @@ export default class extends LitElement {
   private p2p!: P2P
 
   firstUpdated() {
-    this.p2p = new P2P(signaling, stuns, 0, this.name)
+    this.p2p = new P2P(config.signaling, config.stuns, 0, this.name)
 
     this.p2p.stateChange
       .on(state => this.log = `State changed to ${state}`)
       .catch(err => this.log = ['status deactivated', err])
-      .finally(() => this.log = 'State will no longer be updated')
+      .finally(() => {
+        this.log = 'State will no longer be updated'
+        // clear what we know...
+        this.clients = []
+        this.acks = []
+      })
 
     this.bindClient()
     this.bindReady()
@@ -82,40 +87,18 @@ export default class extends LitElement {
         .catch(err => this.log = [`Connection with ${name} closed`, err])
   }
 
-  private propose = (event: Event) => {
-    event.preventDefault()
-    try {
-      this.p2p.proposeGroup(...this.clients.filter((_, index) => this.acks[index]))
-    } catch (err) {
-      this.log = err
-    }
-  }
-
-  private broadcast = (event: Event) => {
-    event.preventDefault()
-    try {
-      this.p2p.broadcast(this.data)
-      this.data = ''
-    } catch (err) {
-      this.log = err
-    }
-  }
-
-  private genRandom = (event: Event) => {
-    event.preventDefault()
-    try {
-      this.log = `A shared random number for us is ${this.p2p.random(true)}`
-      this.p2p.broadcast(new ArrayBuffer(1))
-    } catch (err) {
-      this.log = err
-    }
-  }
-
   render = () => html`${
     this.p2p && this.p2p.ready.triggered
       ? html`
       <form @submit=${this.broadcast}>
-        <input required type="text" name="data" autocomplete="off" value=${this.data} @change=${({target}: ChangeEvent) => this.data = target!.value}/>
+        <input
+          required
+          type="text"
+          name="data"
+          autocomplete="off"
+          value=${this.data} 
+          @change=${({ target }: ChangeEvent) => this.data = target!.value}
+        />
         <input type="submit" value="Broadcast">
       </form>
       <button @click=${this.genRandom}>Generate Random Number</button>
@@ -148,4 +131,33 @@ export default class extends LitElement {
       </form>`}
 
   <lit-log .entry=${this.log}></lit-log>`
+
+  private propose = (event: Event) => {
+    event.preventDefault()
+    try {
+      this.p2p.proposeGroup(...this.clients.filter((_, index) => this.acks[index]))
+    } catch (err) {
+      this.log = err
+    }
+  }
+
+  private broadcast = (event: Event) => {
+    event.preventDefault()
+    try {
+      this.p2p.broadcast(this.data)
+      this.data = ''
+    } catch (err) {
+      this.log = err
+    }
+  }
+
+  private genRandom = (event: Event) => {
+    event.preventDefault()
+    try {
+      this.log = `A shared random number for us is ${this.p2p.random(true)}`
+      this.p2p.broadcast(new ArrayBuffer(1))
+    } catch (err) {
+      this.log = err
+    }
+  }
 }

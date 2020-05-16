@@ -1,0 +1,6 @@
+{
+  "signaling": "wss://ws.parkshade.com:443",
+  "stuns": [
+    "stun:stun.parkshade.com:80"
+  ]
+}

@@ -58,9 +58,8 @@ export default class <T extends Sendable = Sendable> implements SimplePeer<T> {
   }
 
   private async exchangeSdp(client: Client) {
-    // Openers should create offer -> accept answer
     try {
-      if (await client.isOpener.event) {
+      if (await client.isOpener.event) { // Openers should create offer -> accept answer
         client.creator.activate(await this.rtc.createOffer())
         this.rtc.acceptSDP(await client.acceptor.event)
       } else { // Closers should accept offter -> create answer
