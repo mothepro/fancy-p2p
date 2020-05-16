@@ -25,7 +25,7 @@ export default class {
   private readonly groups: Map<string, Emitter<SimpleClient>> = new Map
 
   /** Activated when our connection to signaling server is established. */
-  readonly ready = new SafeSingleEmitter(() => this.server.send(buildIntro(this.lobby, this.name)))
+  readonly ready = new SafeSingleEmitter(() => this.serverSend(buildIntro(this.lobby, this.name)))
 
   /** Connection with server should close */
   readonly close = new SingleEmitter(() => this.server.close())
@@ -60,7 +60,7 @@ export default class {
             // Clean up on disconnect
             client.disconnect.once(() => this.allClients.delete(id))
             // DM the SDP for the client after creation
-            client.creator.once(sdp => this.server.send(buildSdp(id, sdp)))
+            client.creator.once(sdp => this.serverSend(buildSdp(id, sdp)))
             break
 
           case Code.CLIENT_LEAVE:
@@ -81,7 +81,7 @@ export default class {
                   members: [...members].map(this.getClient),
                   ack: this.groups.get(members.hash)!,
                   action: (accept) => {
-                    this.server.send(buildProposal(accept, ...members))
+                    this.serverSend(buildProposal(accept, ...members))
                     // Make DRY with switch
                     if (!accept) {
                       this.groups.get(members.hash)?.deactivate(new ClientError(`Group with ${members} was rejected.`))
@@ -152,9 +152,17 @@ export default class {
     if (ids.size < 1)
       throw Error('Can not propose a group without members.')
 
-    this.server.send(buildProposal(true, ...ids))
+    this.serverSend(buildProposal(true, ...ids))
     this.groups.set(ids.hash, new Emitter)
 
     return this.groups.get(ids.hash)!
+  }
+
+  /** A wrapper around socket send since that method doesn't throw, for some reason. */
+  private serverSend(data: ArrayBuffer) {
+    if (this.server.readyState == WebSocket.CLOSING || this.server.readyState == WebSocket.CLOSED)
+      throw Error('WebSocket is already in CLOSING or CLOSED state.')
+      
+    this.server.send(data)
   }
 }

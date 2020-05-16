@@ -33,7 +33,7 @@ export default class <T extends Sendable = Sendable> {
   readonly stateChange = new Emitter<State>(newState => this.state = newState)
 
   /** Shortcut to the peers being available. */
-  readonly ready: SafeSingleEmitter<ReadonlySet<SimplePeer<T>>> = new SafeSingleEmitter(() => this.stateChange.activate(State.READY))
+  readonly ready = new SafeSingleEmitter<ReadonlySet<SimplePeer<T>>>(() => this.stateChange.activate(State.READY))
 
   /** Generator for random integers that will be consistent across connections within [-2 ** 31, 2 ** 31). */
   rng?: Generator<number, never, void>
