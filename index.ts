@@ -7,6 +7,8 @@ import { Max } from './util/constants.js'
 import rng from './util/random.js'
 import Signaling from './src/Signaling.js'
 
+export type { SimpleClient } from './src/Client.js'
+export type { SimplePeer } from './src/Peer.js'
 export { default as ClientError } from './util/ClientError.js'
 
 /** Represent where we are in the process of connecting to some peers. */

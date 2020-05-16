@@ -1,5 +1,6 @@
 import { LitElement, html, customElement, property } from 'lit-element'
 import type { SimpleClient } from '../src/Client.js'
+import type { SimplePeer } from '../src/Peer.js'
 import config from './server-config.js'
 import ClientError from '../util/ClientError.js'
 import P2P from '../index.js'
@@ -17,6 +18,11 @@ export default class extends LitElement {
   @property({ type: String })
   private name!: string
 
+  /** Completed direct connection to others. */
+  @property({ attribute: false, type: Array })
+  private peers: SimplePeer[] = []
+
+  /** Others connected to the lobby. */
   @property({ attribute: false, type: Array })
   private clients: SimpleClient[] = []
 
@@ -79,7 +85,8 @@ export default class extends LitElement {
   }
 
   private async bindReady() {
-    for (const { name, message } of await this.p2p.ready.event)
+    this.peers = [...await this.p2p.ready.event]
+    for (const { name, message } of this.peers)
       message
         .on(data => data instanceof ArrayBuffer && data.byteLength == 1
           ? this.log = `A shared random number for us is ${this.p2p.random(true)}`
@@ -87,8 +94,8 @@ export default class extends LitElement {
         .catch(err => this.log = [`Connection with ${name} closed`, err])
   }
 
-  render = () => html`${
-    this.p2p && this.p2p.ready.triggered
+  render = () => html`
+    ${!!this.peers.length
       ? html`
       <form @submit=${this.broadcast}>
         <input
@@ -101,35 +108,33 @@ export default class extends LitElement {
         />
         <input type="submit" value="Broadcast">
       </form>
-      <button @click=${this.genRandom}>Generate Random Number</button>
-      `
-      : html`
-      <form @submit=${this.propose}>${ // This shouldn't be displayed if in LOADING state
-        !!this.clients.length
-          ? html`
+      <button @click=${this.genRandom}>Generate Random Number</button>` : ''}
+      
+    ${!!this.clients.length // This shouldn't be displayed if in LOADING state
+      ? html`
           Clients connected to this lobby
-          <ul id="others">${
-            [...this.clients].map(({ name }, index) => html`
-            <li>
-              <label>
-                <input
-                  type="checkbox"
-                  ?checked=${this.acks[index]}
-                  @click=${() => this.acks = this.acks.map((ack, i) => index == i ? !ack : ack)}
-                />
-                ${name}
-              </label>
-            </li>`)}
-          </ul>`
-          : 'Waiting for others to connect'}
-      <br/>
-      <input
-        type="submit"
-        value="Make Group"
-        ?disabled=${!this.acks.some(ack => ack)}
-      />
-      </form>`}
-
+          <form @submit=${this.propose}>
+            <ul id="others">
+              ${[...this.clients].map(({ name }, index) => html`
+              <li>
+                <label>
+                  <input
+                    type="checkbox"
+                    ?checked=${this.acks[index]}
+                    @click=${() => this.acks = this.acks.map((ack, i) => index == i ? !ack : ack)}
+                  />
+                  ${name}     
+                </label>
+              </li>`)}
+            </ul>
+            <input
+              type="submit"
+              value="Make Group"
+              ?disabled=${!this.acks.some(ack => ack)}
+            />
+          </form>`
+      : 'No one else has joined this lobby... yet.'}
+      
   <lit-log .entry=${this.log}></lit-log>`
 
   private propose = (event: Event) => {

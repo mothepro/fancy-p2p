@@ -4,7 +4,7 @@ import RTC, { Sendable, State } from '@mothepro/ez-rtc'
 import Client from './Client.js'
 
 /** Represents a direct connection to a peer found in the signalling lobby. */
-export interface SimplePeer<T> {
+export interface SimplePeer<T = Sendable> {
   /** Name of the new peer. */
   readonly name: Name
   /** Send data to activate the `message` listener for the peer. */
