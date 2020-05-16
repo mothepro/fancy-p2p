@@ -60,7 +60,7 @@ export default class {
             // Clean up on disconnect
             client.disconnect.once(() => this.allClients.delete(id))
             // DM the SDP for the client after creation
-            client.creator.once(sdp => this.serverSend(buildSdp(id, sdp)))
+            client.creator.on(sdp => this.serverSend(buildSdp(id, sdp)))
             break
 
           case Code.CLIENT_LEAVE:

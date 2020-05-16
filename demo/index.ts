@@ -159,8 +159,8 @@ export default class extends LitElement {
   private genRandom = (event: Event) => {
     event.preventDefault()
     try {
-      this.log = `A shared random number for us is ${this.p2p.random(true)}`
       this.p2p.broadcast(new ArrayBuffer(1))
+      this.log = `A shared random number for us is ${this.p2p.random(true)}`
     } catch (err) {
       this.log = err
     }

@@ -39,11 +39,11 @@ export default class implements SimpleClient {
 
   /** Activate with the creation of an SDP to send it to the corresponding client. */
   // TODO doesn't need to be exposed as an emitter
-  readonly creator: SafeSingleEmitter<RTCSessionDescriptionInit> = new SafeSingleEmitter
+  readonly creator: SafeEmitter<RTCSessionDescriptionInit> = new SafeEmitter
 
   /** Activates when an SDP is received for this corresponding client. */
   // TODO doesn't need to be exposed as an emitter
-  readonly acceptor: SafeSingleEmitter<RTCSessionDescriptionInit> = new SafeSingleEmitter
+  readonly acceptor: SafeEmitter<RTCSessionDescriptionInit> = new SafeEmitter
 
   constructor(private readonly id: ClientID, readonly name: Name) { }
 }
