@@ -71,10 +71,14 @@ export default class <T extends Sendable = Sendable> implements SimplePeer<T> {
           creator.activate(await this.rtc.createAnswer())
         }
 
-        await Promise.race([
-          delay(timeout).then(() => Promise.reject(Error(`Connection didn't become ready in ${timeout}ms`))),
-          filterEmitter(this.rtc.statusChange, State.READY),
-        ])
+        // TODO Simplify
+        if (timeout)
+          await Promise.race([
+            delay(timeout).then(() => Promise.reject(Error(`Connection didn't become ready in ${timeout}ms`))),
+            filterEmitter(this.rtc.statusChange, State.CONNECTED),
+          ])
+        else
+          await filterEmitter(this.rtc.statusChange, State.CONNECTED)
 
         return // leave function behind... we are good :)
       } catch (err) {

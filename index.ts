@@ -86,6 +86,10 @@ export default class <T extends Sendable = Sendable> {
     private readonly stuns: string[],
     lobby: LobbyID,
     name: Name,
+    /** Number of times to attempt to make an RTC connection. */
+    private readonly retries = 1,
+    /** If greater than 0, the number of milliseconds to wait before giving up on the connection. */
+    private readonly timeout = 0,
   ) {
     this.server = new Signaling(server, lobby, name)
 
@@ -113,7 +117,7 @@ export default class <T extends Sendable = Sendable> {
     this.rng = rng(code)
 
     for (const client of members)
-      peers.push(new Peer(this.stuns, client))
+      peers.push(new Peer(this.stuns, client, this.retries, this.timeout))
 
     try {
       // Every connection is connected successfully, ready up & close connection with server
