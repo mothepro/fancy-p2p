@@ -19,8 +19,11 @@ export default class <T extends Sendable = Sendable> implements SimplePeer<T> {
 
   private rtc!: RTC
 
+  /** This holds the errors thrown for the RTCs that were unable to be created. */
+  private readonly reasons: Error[] = []
+
   readonly ready = new SingleEmitter(async () => {
-    // @ts-ignore this will be okay since we know Sendable can be cast to T
+    // @ts-ignore This cast okay, since T is a subclass of Sendable, and the type is only guaranteed through the generic
     this.rtc.message.on(this.message.activate)
 
     try {
@@ -31,12 +34,11 @@ export default class <T extends Sendable = Sendable> implements SimplePeer<T> {
     }
   })
 
-  // This cast okay, since T is a subclass of Sendable, and the type is only guaranteed through the generic
   message: Emitter<T> = new Emitter
 
   readonly name: Name
 
-  send(data: T) {
+  readonly send = (data: T) => {
     if (!this.message.isAlive)
       throw Error('Unable to send data when connection is not open')
     this.rtc.send(data)
@@ -48,7 +50,7 @@ export default class <T extends Sendable = Sendable> implements SimplePeer<T> {
       .then(this.ready.activate)
       .catch(err => {
         this.ready.deactivate(err)
-        this.message.cancel() // Cancel now since no events will ever occur.
+        this.message.cancel() // Cancel early since no events will ever occur.
       })
   }
 
@@ -58,6 +60,7 @@ export default class <T extends Sendable = Sendable> implements SimplePeer<T> {
     for (let attempt = 0; attempt < Math.max(1, retries); attempt++)
       try {
         this.rtc = new RTC(stuns)
+        // TODO see if this can be done after SDP exchange
         const isReady = filter(this.rtc.statusChange, State.CONNECTED)
 
         // Exchange the SDPs
@@ -71,22 +74,22 @@ export default class <T extends Sendable = Sendable> implements SimplePeer<T> {
           creator.activate(await this.rtc.createAnswer())
         }
 
-        await !timeout
-          ? isReady
-          : Promise.race([
+        if (timeout)
+          await Promise.race([
             isReady,
             delay(timeout).then(() => Promise.reject(Error(`Connection didn't become ready in ${timeout}ms`))),
           ])
+        else
+          await isReady
 
         return // leave function behind... we are good :)
       } catch (err) {
-        console.error({ attempt, err })
-        reasons.push(err)
+        this.reasons.push(err)
       }
 
     // Aggregate error
     const err: Error & { reasons?: Error[] } = Error(`Unable to initializes a Direct Connection with ${name} after ${retries} attempts`)
-    err.reasons = reasons
+    err.reasons = this.reasons
     throw err
   }
 }

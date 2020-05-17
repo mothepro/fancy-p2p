@@ -6,6 +6,11 @@ import ClientError from '../util/ClientError.js'
 import P2P from '../index.js'
 import './log.js'
 
+const enum Message {
+  RTT,
+  GENERATE_RANDOM,
+}
+
 // TODO find the real version of this
 interface ChangeEvent extends KeyboardEvent {
   target: KeyboardEvent['target'] & {
@@ -26,7 +31,7 @@ export default class extends LitElement {
 
   /** Completed direct connection to others. */
   @property({ attribute: false, type: Array })
-  private peers: SimplePeer[] = []
+  private peers: readonly SimplePeer[] = []
 
   /** Others connected to the lobby. */
   @property({ attribute: false, type: Array })
@@ -43,6 +48,18 @@ export default class extends LitElement {
   private data: string = ''
 
   private p2p!: P2P
+
+  /** The number of microseconds when requesting an RTT. */
+  private initRtt?: number
+  private replies = 0
+
+  /**
+   * Number of microseconds have passed since the page has opened.
+   * Could be innaccurate due to https://developer.mozilla.org/en-US/docs/Web/API/Performance/now#Reduced_time_precision
+   */
+  get elapsedTime() {
+    return Math.trunc(1000 * performance.now())
+  }
 
   firstUpdated() {
     this.p2p = new P2P(config.signaling, config.stuns, 0, this.name, this.retries, this.timeout)
@@ -86,18 +103,50 @@ export default class extends LitElement {
         .catch((err: ClientError) => this.log = [`${err.client ? err.client.name : 'I'} rejected invitation for ${names}`, err])
 
       if (action)
-        action(confirm(`Accept group with ${names}`))
+        action(true) //confirm(`Accept group with ${names}`))
     }
   }
 
   private async bindReady() {
-    this.peers = [...await this.p2p.ready.event]
-    for (const { name, message } of this.peers)
-      message
-        .on(data => data instanceof ArrayBuffer && data.byteLength == 1
-          ? this.log = `A shared random number for us is ${this.p2p.random(true)}`
-          : this.log = `${name} says "${data}"`)
-        .catch(err => this.log = [`Connection with ${name} closed`, err])
+    this.peers = await this.p2p.ready.event
+    this.clients = []
+    this.acks = []
+    this.peers.map(peer => this.bindMessage(peer))
+  }
+
+  private async bindMessage({ name, message, send }: SimplePeer) {
+    try {
+      for await (const data of message) {
+        if (data instanceof ArrayBuffer) {
+          if (data.byteLength != 1)
+            throw Error(`${name} sent an ArrayBuffer(${data.byteLength}), only expecting buffers of size 1`)
+
+          switch (new DataView(data).getInt8(0)) {
+            case Message.GENERATE_RANDOM:
+              this.log = `A shared random number for us is ${this.p2p.random(true)}`
+              break
+
+            case Message.RTT:
+              if (this.initRtt) {
+                this.log = `Round Trip Time with ${name} is ${this.elapsedTime - this.initRtt}μs`
+                this.replies++
+              } else
+                send(new Uint8Array([Message.RTT]))
+              
+              // All living peers responded
+              if (this.replies == this.peers.length) { 
+                delete this.initRtt
+                this.replies = 0
+              }
+              break
+          }
+        } else
+          this.log = `${name} says "${data}"`
+      }
+    } catch (err) {
+      this.log = [`Connection with ${name} closed`, err]
+    }
+    // Remove peer from list
   }
 
   render = () => html`
@@ -114,6 +163,7 @@ export default class extends LitElement {
         />
         <input type="submit" value="Broadcast">
       </form>
+      <button @click=${this.calcRtts}>Latency Check</button>
       <button @click=${this.genRandom}>Generate Random Number</button>` : ''}
       
     ${!!this.clients.length // This shouldn't be displayed if in LOADING state
@@ -143,6 +193,8 @@ export default class extends LitElement {
       
   <lit-log .entry=${this.log}></lit-log>`
 
+  // The following methods seem like too much...
+
   private propose = (event: Event) => {
     event.preventDefault()
     try {
@@ -165,8 +217,18 @@ export default class extends LitElement {
   private genRandom = (event: Event) => {
     event.preventDefault()
     try {
-      this.p2p.broadcast(new ArrayBuffer(1))
+      this.p2p.broadcast(new Uint8Array([Message.GENERATE_RANDOM]))
       this.log = `A shared random number for us is ${this.p2p.random(true)}`
+    } catch (err) {
+      this.log = err
+    }
+  }
+
+  private calcRtts = (event: Event) => {
+    event.preventDefault()
+    try {
+      this.initRtt = this.elapsedTime
+      this.p2p.broadcast(new Uint8Array([Message.RTT]))
     } catch (err) {
       this.log = err
     }

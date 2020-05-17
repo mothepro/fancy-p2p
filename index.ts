@@ -79,7 +79,7 @@ export default class <T extends Sendable = Sendable> {
 
   /** Send data to all connected peers. */
   readonly broadcast: (data: T) => void = data => this.assert(State.READY)
-    && this.ready.once(peers => [...peers].map(peer => peer.send(data)))
+    && this.ready.once(peers => [...peers].map(peer => peer.send(data))) // TODO, this throws async in a sync function. fix this.
 
   constructor(
     server: string,
