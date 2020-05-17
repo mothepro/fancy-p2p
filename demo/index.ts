@@ -39,7 +39,7 @@ export default class extends LitElement {
   private p2p!: P2P
 
   firstUpdated() {
-    this.p2p = new P2P(config.signaling, config.stuns, 0, this.name)
+    this.p2p = new P2P(config.signaling, config.stuns, 0, this.name, 5, 3000)
 
     this.p2p.stateChange
       .on(state => this.log = `State changed to ${state}`)

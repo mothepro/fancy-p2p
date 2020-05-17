@@ -127,7 +127,7 @@ export default class {
       this.server = new WebSocket(address)
       this.server.addEventListener('open', this.ready.activate)
       this.server.addEventListener('close', this.close.activate)
-      this.server.addEventListener('error', ev => this.close.deactivate(Error(`Connection to Server closed unexpectedly. ${ev}`)))
+      this.server.addEventListener('error', () => this.close.deactivate(Error('Connection to Server closed unexpectedly.')))
       this.server.addEventListener('message', async ({ data }) => data instanceof Blob
         && this.message.activate(new DataView(await data.arrayBuffer())))
     } catch (err) {

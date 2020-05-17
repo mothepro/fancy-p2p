@@ -1,9 +1,8 @@
-import { SingleEmitter, Emitter, Listener } from 'fancy-emitter'
+import { SingleEmitter, Emitter, Listener, filter } from 'fancy-emitter'
 import type { Name } from '@mothepro/signaling-lobby'
 import RTC, { Sendable, State } from '@mothepro/ez-rtc'
 import Client from './Client.js'
 import delay from '../util/delay.js'
-import filterEmitter from '../util/filterEmitter.js'
 
 /** Represents a direct connection to a peer found in the signalling lobby. */
 export interface SimplePeer<T = Sendable> {
@@ -25,7 +24,7 @@ export default class <T extends Sendable = Sendable> implements SimplePeer<T> {
     this.rtc.message.on(this.message.activate)
 
     try {
-      await filterEmitter(this.rtc.statusChange, State.OFFLINE)
+      await filter(this.rtc.statusChange, State.OFFLINE)
       this.message.cancel()
     } catch (err) {
       this.message.deactivate(err)
@@ -56,9 +55,10 @@ export default class <T extends Sendable = Sendable> implements SimplePeer<T> {
   private async makeRtc(stuns: string[], { isOpener, acceptor, creator }: Client, retries: number, timeout: number) {
     const reasons: Error[] = []
 
-    for (let attempt = 0; attempt < retries; attempt++)
+    for (let attempt = 0; attempt < Math.max(1, retries); attempt++)
       try {
         this.rtc = new RTC(stuns)
+        const isReady = filter(this.rtc.statusChange, State.CONNECTED)
 
         // Exchange the SDPs
         if (await isOpener.event) {
@@ -71,17 +71,16 @@ export default class <T extends Sendable = Sendable> implements SimplePeer<T> {
           creator.activate(await this.rtc.createAnswer())
         }
 
-        // TODO Simplify
-        if (timeout)
-          await Promise.race([
+        await !timeout
+          ? isReady
+          : Promise.race([
+            isReady,
             delay(timeout).then(() => Promise.reject(Error(`Connection didn't become ready in ${timeout}ms`))),
-            filterEmitter(this.rtc.statusChange, State.CONNECTED),
           ])
-        else
-          await filterEmitter(this.rtc.statusChange, State.CONNECTED)
 
         return // leave function behind... we are good :)
       } catch (err) {
+        console.error({ attempt, err })
         reasons.push(err)
       }
 
