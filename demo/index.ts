@@ -42,6 +42,9 @@ export default class extends LitElement {
   private log: any = 'Initiated with State 0'
 
   @property({ attribute: false, type: String })
+  private chat: any
+
+  @property({ attribute: false, type: String })
   private data: string = ''
 
   private p2p!: P2P
@@ -121,12 +124,12 @@ export default class extends LitElement {
 
           switch (new DataView(data).getInt8(0)) {
             case Message.GENERATE_RANDOM:
-              this.log = `A shared random number for us is ${this.p2p.random(true)}`
+              this.chat = `A shared random number for us is ${this.p2p.random(true)}`
               break
 
             case Message.RTT:
               if (this.initRtt) {
-                this.log = `Round Trip Time with ${name} is ${this.elapsedTime - this.initRtt}μs`
+                this.chat = `Round Trip Time with ${name} is ${this.elapsedTime - this.initRtt}μs`
                 this.replies++
               } else
                 send(new Uint8Array([Message.RTT]))
@@ -139,7 +142,7 @@ export default class extends LitElement {
               break
           }
         } else
-          this.log = `${name} says "${data}"`
+          this.chat = `${name} says "${data}"`
       }
     } catch (err) {
       this.log = [`Connection with ${name} closed`, err]
@@ -174,7 +177,8 @@ export default class extends LitElement {
       <input type="submit" value="Broadcast">
     </form>
     <button @click=${this.calcRtts}>Latency Check</button>
-    <button @click=${this.genRandom}>Generate Random Number</button>`
+    <button @click=${this.genRandom}>Generate Random Number</button>
+    <lit-log open .entry=${this.chat}>Chat</lit-log>`
 
   /** Chilling in the lobby. */
   private renderLobby = () => !!this.clients.length
@@ -227,7 +231,7 @@ export default class extends LitElement {
     event.preventDefault()
     try {
       this.p2p.broadcast(new Uint8Array([Message.GENERATE_RANDOM]))
-      this.log = `A shared random number for us is ${this.p2p.random(true)}`
+      this.chat = `A shared random number for us is ${this.p2p.random(true)}`
     } catch (err) {
       this.log = err
     }
