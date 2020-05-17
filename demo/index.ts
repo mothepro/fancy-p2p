@@ -1,5 +1,5 @@
 import { LitElement, html, customElement, property } from 'lit-element'
-import { filter } from 'fancy-emitter'
+import { filter, Listener } from 'fancy-emitter'
 import P2P, { ClientError, State, SimpleClient, SimplePeer } from '../index.js'
 import config from './server-config.js'
 import './log.js'
@@ -34,6 +34,13 @@ export default class extends LitElement {
   /** Clients that we would like to include in our group */
   @property({ attribute: false, type: Array })
   private acks: boolean[] = []
+
+  /** List of incoming proposals */
+  @property({ attribute: false, type: Array })
+  private proposals: {
+    groupName: string
+    action: (accept: boolean) => void
+  }[] = []
 
   @property({ attribute: false, type: String })
   private log: any = 'Initiated with State 0'
@@ -90,26 +97,43 @@ export default class extends LitElement {
     }
   }
 
-  private async bindProposals() {
-    for await (const { members, ack, action, client } of this.p2p.initiator) {
-      const names = members.map(({ name }) => name).join(', ') + ' & you'
-      this.log = `${client ? client.name : 'I'} proposed a group for ${names}`
-
-      ack
-        .on(({ name }) => this.log = `${name} accepted invitation for ${names}`)
-        .catch((err: ClientError) => this.log = [`${err.client ? err.client.name : 'I'} rejected invitation for ${names}`, err])
-
-      if (action)
-        action(true) //confirm(`Accept group with ${names}`))
-    }
-  }
-
   private async bindReady() {
     await filter(this.p2p.stateChange, State.READY)
     for (const peer of this.p2p.peers)
       this.bindMessage(peer)
     this.clients = []
     this.acks = []
+  }
+
+  private async bindProposals() {
+    for await (const { members, ack, action, client } of this.p2p.initiator) {
+      const names = members.map(({ name }) => name).join(', ')
+      this.log = `${client ? client.name : ''} proposed a group for ${names} & you`
+      this.bindAck(names, ack, action)
+    }
+  }
+
+  private async bindAck(groupName: string, ack: Listener<SimpleClient>, action?: (accept: boolean) => void) {
+    const current = action
+      ? this.proposals.length // the index of the proposal we may add
+      : undefined
+    
+    if (action) // proposal that we can accept or reject
+      this.proposals = [...this.proposals, { groupName, action }]
+    
+    try {
+      for await (const { name } of ack) {
+        this.log = `${name} accepted invitation with ${groupName} & you`
+      }
+    } catch (err) {
+      if (err instanceof ClientError)
+        this.log = [`${err.client ? err.client.name : ''} rejected invitation to group with ${groupName} & you`, err]
+      else
+        throw err
+    } finally { // Remove the proposal once it is completed.
+      if (typeof current == 'number')
+        this.proposals = this.proposals.filter((_, i) => current != i)
+    }
   }
 
   private async bindMessage({ name, message, send }: SimplePeer) {
@@ -197,10 +221,24 @@ export default class extends LitElement {
       </ul>
       <input
         type="submit"
-        value="Make Group"
+        value="Propose Group"
         ?disabled=${!this.acks.some(ack => ack)}
       />
-    </form>`
+    </form>
+    ${this.proposals.map(({ groupName, action }, index) => html`
+      Join group with ${groupName}?
+      <button
+        @click=${() => {
+        this.proposals = this.proposals.filter((_, i) => index != i)
+        action(true)
+      }}>Accept</button>
+      <button
+        @click=${() => {
+        this.proposals = this.proposals.filter((_, i) => index != i)
+        action(false)
+      }}>Reject</button>
+      <br/>
+    `)}`
     : 'No one else has joined this lobby... yet.'
 
   // The following methods seem redundant...
@@ -218,6 +256,7 @@ export default class extends LitElement {
     event.preventDefault()
     try {
       this.p2p.broadcast(this.data)
+      this.chat = `Broadcasted "${this.data}"`
       this.data = ''
     } catch (err) {
       this.log = err
