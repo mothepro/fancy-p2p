@@ -18,6 +18,12 @@ export default class extends LitElement {
   @property({ type: String })
   private name!: string
 
+  @property({ type: Number })
+  private retries?: number
+
+  @property({ type: Number })
+  private timeout?: number
+
   /** Completed direct connection to others. */
   @property({ attribute: false, type: Array })
   private peers: SimplePeer[] = []
@@ -39,7 +45,7 @@ export default class extends LitElement {
   private p2p!: P2P
 
   firstUpdated() {
-    this.p2p = new P2P(config.signaling, config.stuns, 0, this.name, 5, 3000)
+    this.p2p = new P2P(config.signaling, config.stuns, 0, this.name, this.retries, this.timeout)
 
     this.p2p.stateChange
       .on(state => this.log = `State changed to ${state}`)
