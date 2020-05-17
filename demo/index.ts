@@ -1,10 +1,7 @@
 import { LitElement, html, customElement, property } from 'lit-element'
 import { filter } from 'fancy-emitter'
-import type { SimpleClient } from '../src/Client.js'
-import type { SimplePeer } from '../src/Peer.js'
+import P2P, { ClientError, State, SimpleClient, SimplePeer } from '../index.js'
 import config from './server-config.js'
-import ClientError from '../util/ClientError.js'
-import P2P, { State } from '../index.js'
 import './log.js'
 
 const enum Message {
