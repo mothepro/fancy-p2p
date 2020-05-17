@@ -167,7 +167,8 @@ export default class extends LitElement {
         type="text"
         name="data"
         autocomplete="off"
-        value=${this.data}
+        placeholder="Message"
+        .value=${this.data}
         @change=${({ target }: ChangeEvent) => this.data = target!.value}
       />
       <input type="submit" value="Broadcast">
