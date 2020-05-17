@@ -1,9 +1,10 @@
 import { LitElement, html, customElement, property } from 'lit-element'
+import { filter } from 'fancy-emitter'
 import type { SimpleClient } from '../src/Client.js'
 import type { SimplePeer } from '../src/Peer.js'
 import config from './server-config.js'
 import ClientError from '../util/ClientError.js'
-import P2P from '../index.js'
+import P2P, { State } from '../index.js'
 import './log.js'
 
 const enum Message {
@@ -28,10 +29,6 @@ export default class extends LitElement {
 
   @property({ type: Number })
   private timeout?: number
-
-  /** Completed direct connection to others. */
-  @property({ attribute: false, type: Array })
-  private peers: readonly SimplePeer[] = []
 
   /** Others connected to the lobby. */
   @property({ attribute: false, type: Array })
@@ -108,10 +105,11 @@ export default class extends LitElement {
   }
 
   private async bindReady() {
-    this.peers = await this.p2p.ready.event
+    await filter(this.p2p.stateChange, State.READY)
+    for (const peer of this.p2p.peers)
+      this.bindMessage(peer)
     this.clients = []
     this.acks = []
-    this.peers.map(peer => this.bindMessage(peer))
   }
 
   private async bindMessage({ name, message, send }: SimplePeer) {
@@ -132,9 +130,9 @@ export default class extends LitElement {
                 this.replies++
               } else
                 send(new Uint8Array([Message.RTT]))
-              
+
               // All living peers responded
-              if (this.replies == this.peers.length) { 
+              if (this.replies == this.p2p.peers.size) {
                 delete this.initRtt
                 this.replies = 0
               }
@@ -146,54 +144,64 @@ export default class extends LitElement {
     } catch (err) {
       this.log = [`Connection with ${name} closed`, err]
     }
-    // Remove peer from list
   }
 
-  render = () => html`
-    ${!!this.peers.length
-      ? html`
-      <form @submit=${this.broadcast}>
-        <input
-          required
-          type="text"
-          name="data"
-          autocomplete="off"
-          value=${this.data} 
-          @change=${({ target }: ChangeEvent) => this.data = target!.value}
-        />
-        <input type="submit" value="Broadcast">
-      </form>
-      <button @click=${this.calcRtts}>Latency Check</button>
-      <button @click=${this.genRandom}>Generate Random Number</button>` : ''}
-      
-    ${!!this.clients.length // This shouldn't be displayed if in LOADING state
-      ? html`
-          Clients connected to this lobby
-          <form @submit=${this.propose}>
-            <ul id="others">
-              ${[...this.clients].map(({ name }, index) => html`
-              <li>
-                <label>
-                  <input
-                    type="checkbox"
-                    ?checked=${this.acks[index]}
-                    @click=${() => this.acks = this.acks.map((ack, i) => index == i ? !ack : ack)}
-                  />
-                  ${name}     
-                </label>
-              </li>`)}
-            </ul>
-            <input
-              type="submit"
-              value="Make Group"
-              ?disabled=${!this.acks.some(ack => ack)}
-            />
-          </form>`
-      : 'No one else has joined this lobby... yet.'}
-      
+  render = () => html`${{ // "switch" statement in string
+    [State.OFFLINE]: 'P2P is offline',
+    [State.LOADING]: 'Loading...',
+    [State.LOBBY]: this.renderLobby(),
+    [State.READY]: this.renderReady(),
+  }[this.p2p?.state || State.OFFLINE]}
   <lit-log .entry=${this.log}></lit-log>`
 
-  // The following methods seem like too much...
+  /** We have direct connections. */
+  private renderReady = () => this.p2p && html`
+    Peers
+    <ul>
+    ${[...this.p2p.peers].map(({ name }) => html`
+      <li>${name}</li>`)}
+    </ul>
+    <form @submit=${this.broadcast}>
+      <input
+        required
+        type="text"
+        name="data"
+        autocomplete="off"
+        value=${this.data}
+        @change=${({ target }: ChangeEvent) => this.data = target!.value}
+      />
+      <input type="submit" value="Broadcast">
+    </form>
+    <button @click=${this.calcRtts}>Latency Check</button>
+    <button @click=${this.genRandom}>Generate Random Number</button>`
+
+  /** Chilling in the lobby. */
+  private renderLobby = () => !!this.clients.length
+    ? html`
+    Clients connected to this lobby
+    <form @submit=${this.propose}>
+      <ul id="others">
+        ${[...this.clients].map(({ name }, index) => html`
+        <li>
+          <label>
+            <input
+              type="checkbox"
+              ?checked=${this.acks[index]}
+              @click=${() => this.acks = this.acks.map((ack, i) => index == i ? !ack : ack)}
+            />
+            ${name}     
+          </label>
+        </li>`)}
+      </ul>
+      <input
+        type="submit"
+        value="Make Group"
+        ?disabled=${!this.acks.some(ack => ack)}
+      />
+    </form>`
+    : 'No one else has joined this lobby... yet.'
+
+  // The following methods seem redundant...
 
   private propose = (event: Event) => {
     event.preventDefault()

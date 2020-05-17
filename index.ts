@@ -28,14 +28,14 @@ export const enum State {
 
 export default class <T extends Sendable = Sendable> {
 
-  private state = State.OFFLINE
+  readonly state: State = State.OFFLINE
   private readonly server: Signaling
 
   /** Activated when the state changes, Cancels when finalized, Deactivates when error is throw. */
-  readonly stateChange = new Emitter<State>(newState => this.state = newState)
+  readonly stateChange = new Emitter<State>(newState => (this.state as State) = newState)
 
-  /** Shortcut to the peers being available. */
-  readonly ready = new SafeSingleEmitter<ReadonlyArray<SimplePeer<T>>>(() => this.stateChange.activate(State.READY))
+  /** The peers who's connections are still open */
+  readonly peers: Set<SimplePeer<T>> = new Set
 
   /** Generator for random integers that will be consistent across connections within [-2 ** 31, 2 ** 31). */
   private rng?: Generator<number, never, void>
@@ -56,9 +56,9 @@ export default class <T extends Sendable = Sendable> {
   }> = new SafeEmitter
 
   // TODO allow READY state even tho the state doesn't change until the next tick
-  protected assert(valid: State) {
+  protected assert(valid: State, message = `Expected state to be ${valid} but was ${this.state}`) {
     if (this.state != valid)
-      throw Error(`Expected state to be ${valid} but was ${this.state}`)
+      throw Error(message)
     return true as const
   }
 
@@ -79,7 +79,7 @@ export default class <T extends Sendable = Sendable> {
 
   /** Send data to all connected peers. */
   readonly broadcast: (data: T) => void = data => this.assert(State.READY)
-    && this.ready.once(peers => [...peers].map(peer => peer.send(data))) // TODO, this throws async in a sync function. fix this.
+    && [...this.peers].map(peer => peer.send(data))
 
   constructor(
     server: string,
@@ -111,18 +111,19 @@ export default class <T extends Sendable = Sendable> {
   }
 
   private async bindFinalization() {
-    const peers: Peer<T>[] = [],
-      { code, members } = await this.server.finalized.event
+    const { code, members } = await this.server.finalized.event,
+      peers: Peer<T>[] = []
 
     this.rng = rng(code)
-
     for (const client of members)
-      peers.push(new Peer(this.stuns, client, this.retries, this.timeout))
+      peers.push(new Peer<T>(this.stuns, client, this.retries, this.timeout))
 
     try {
       // Every connection is connected successfully, ready up & close connection with server
-      await Promise.all([...peers].map(peer => peer.ready.event))
-      this.ready.activate(peers)
+      await Promise.all(peers.map(({ ready: { event } }) => event))
+      for (const peer of peers)
+        this.savePeer(peer)
+      this.stateChange.activate(State.READY)
     } catch (err) {
       this.stateChange.deactivate(err)
     }
@@ -133,10 +134,21 @@ export default class <T extends Sendable = Sendable> {
   private async bindServerClose() {
     try {
       await this.server.close.event
-      if (!this.ready.triggered)
-        this.stateChange.deactivate(Error('Connection with server closed prematurely'))
+      // TODO SingleEmitter resolves faster than Emitter... Fix in fancy-emitter
+      // this.assert(State.READY, 'Connection with server closed prematurely')
+      if (!this.peers.size)
+        throw Error('Connection with server closed prematurely')
     } catch (err) {
       this.stateChange.deactivate(err)
     }
+  }
+
+  /** Save a peer to the instance, removes when connection ends. */
+  private async savePeer(peer: SimplePeer<T>) {
+    this.peers.add(peer)
+    try {
+      for await (const _ of peer.message);
+    } catch { } // Swallow errors
+    this.peers.delete(peer)
   }
 }
