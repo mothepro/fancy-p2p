@@ -84,7 +84,7 @@ export default class {
                     this.serverSend(buildProposal(accept, ...members))
                     // Make DRY with switch
                     if (!accept) {
-                      this.groups.get(members.hash)?.deactivate(new ClientError(`Group with ${members} was rejected.`))
+                      this.groups.get(members.hash)?.deactivate(new ClientError(`Rejected group with ${members}.`))
                       this.groups.delete(members.hash)
                     }
                   }
@@ -93,7 +93,10 @@ export default class {
               // TODO decide if that should be in an else
               this.groups.get(members.hash)!.activate(this.getClient(actor))
             } else {
-              this.groups.get(members.hash)?.deactivate(new ClientError(`Group with ${members} was rejected.`, this.getClient(actor)))
+              let err = Error(`Client ${actor} disconnected, therefore rejecting group with ${members}.`)
+              if (this.allClients.has(id))
+                err = new ClientError(`Group with ${members} was rejected.`, this.getClient(actor))
+              this.groups.get(members.hash)?.deactivate(err)
               this.groups.delete(members.hash)
             }
             return
