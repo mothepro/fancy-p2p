@@ -5,6 +5,9 @@ export default class extends LitElement {
   @property({ type: Array, attribute: false })
   private entries: Array<{ date: Date, entry: any }> = []
 
+  @property({ type: Boolean })
+  private open = false
+
   @property()
   private entry: any
 
@@ -29,8 +32,8 @@ export default class extends LitElement {
   }
 
   render = () => html`
-  <details open>
-    <summary>Log</summary>
+  <details ?open=${this.open}>
+    <summary><slot></slot> Log</summary>
 
     ${this.entries.map(({ date, entry }) => html`
       <pre
