@@ -1,6 +1,6 @@
 import { LitElement, html, customElement, property } from 'lit-element'
 import { filter, Listener } from 'fancy-emitter'
-import P2P, { ClientError, State, SimpleClient, SimplePeer } from '../index.js'
+import P2P, { State, SimpleClient, SimplePeer } from '../index.js'
 import config from './server-config.js'
 import './log.js'
 
@@ -117,19 +117,21 @@ export default class extends LitElement {
     const current = action
       ? this.proposals.length // the index of the proposal we may add
       : undefined
-    
+
     if (action) // proposal that we can accept or reject
       this.proposals = [...this.proposals, { groupName, action }]
-    
+
     try {
       for await (const { name } of ack) {
         this.log = `${name} accepted invitation with ${groupName} & you`
       }
     } catch (err) {
-      if (err instanceof ClientError)
-        this.log = [`${err.client ? err.client.name : ''} rejected invitation to group with ${groupName} & you`, err]
-      else
-        throw err
+      this.log = [
+        err?.client
+          ? `${err.client ? err.client.name : ''} rejected invitation to group with ${groupName} & you`
+          : `Group with ${groupName} & you was shut down`,
+        err
+      ]
     } finally { // Remove the proposal once it is completed.
       if (typeof current == 'number')
         this.proposals = this.proposals.filter((_, i) => current != i)

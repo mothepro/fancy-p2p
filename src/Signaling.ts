@@ -4,7 +4,6 @@ import { parseGroupFinalize, parseGroupChange, parseClientLeave, parseClientJoin
 import { buildProposal, buildIntro, buildSdp } from '../util/builders.js'
 import { Code } from '../util/constants.js'
 import Client, { SimpleClient } from './Client.js'
-import ClientError from '../util/ClientError.js'
 import HashableSet from '../util/HashableSet.js'
 
 /**
@@ -84,7 +83,7 @@ export default class {
                     this.serverSend(buildProposal(accept, ...members))
                     // Make DRY with switch
                     if (!accept) {
-                      this.groups.get(members.hash)?.deactivate(new ClientError(`Rejected group with ${members}.`))
+                      this.groups.get(members.hash)?.deactivate(new Error(`Rejected group with ${members}.`))
                       this.groups.delete(members.hash)
                     }
                   }
@@ -93,9 +92,9 @@ export default class {
               // TODO decide if that should be in an else
               this.groups.get(members.hash)!.activate(this.getClient(actor))
             } else {
-              let err = Error(`Client ${actor} disconnected, therefore rejecting group with ${members}.`)
+              let err: Error & { client?: SimpleClient } = Error(`Group with ${members} was rejected.`)
               if (this.allClients.has(id))
-                err = new ClientError(`Group with ${members} was rejected.`, this.getClient(actor))
+                err.client = this.getClient(actor)
               this.groups.get(members.hash)?.deactivate(err)
               this.groups.delete(members.hash)
             }
@@ -139,7 +138,7 @@ export default class {
         this.server.close()
     }
   }
-  
+
   /** Proposes a group to the server and returns the emitter that will be activated when clients accept it. */
   proposeGroup(...members: SimpleClient[]) {
     const ids: HashableSet<ClientID> = new HashableSet
@@ -165,7 +164,7 @@ export default class {
   private serverSend(data: ArrayBuffer) {
     if (this.server.readyState == WebSocket.CLOSING || this.server.readyState == WebSocket.CLOSED)
       throw Error('WebSocket is already in CLOSING or CLOSED state.')
-      
+
     this.server.send(data)
   }
 }
