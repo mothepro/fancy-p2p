@@ -1,5 +1,5 @@
 import { LitElement, html, customElement, property } from 'lit-element'
-import { filter, Listener } from 'fancy-emitter'
+import { filterValue, Listener } from 'fancy-emitter'
 import P2P, { State, SimpleClient, SimplePeer } from '../index.js'
 import config from './server-config.js'
 import './log.js'
@@ -98,7 +98,7 @@ export default class extends LitElement {
   }
 
   private async bindReady() {
-    await filter(this.p2p.stateChange, State.READY)
+    await filterValue(this.p2p.stateChange, State.READY)
     for (const peer of this.p2p.peers)
       this.bindMessage(peer)
     this.clients = []
@@ -174,8 +174,8 @@ export default class extends LitElement {
 
   render = () => html`${{ // "switch" statement in string
     [State.OFFLINE]: 'P2P is offline',
-    [State.LOADING]: 'Loading...',
     [State.LOBBY]: this.renderLobby(),
+    [State.LOADING]: 'Loading...',
     [State.READY]: this.renderReady(),
   }[this.p2p?.state || State.OFFLINE]}
   <lit-log .entry=${this.log}></lit-log>`
