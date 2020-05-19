@@ -91,8 +91,8 @@ export default class extends LitElement {
 
       client.disconnect.once(() => {
         this.log = `${client.name} has left the lobby`
-        this.acks = this.acks.filterValue((_, i) => i != this.clients.indexOf(client))
-        this.clients = this.clients.filterValue(curr => curr != client)
+        this.acks = this.acks.filter((_, i) => i != this.clients.indexOf(client))
+        this.clients = this.clients.filter(curr => curr != client)
       })
     }
   }
@@ -134,7 +134,7 @@ export default class extends LitElement {
       ]
     } finally { // Remove the proposal once it is completed.
       if (typeof current == 'number')
-        this.proposals = this.proposals.filterValue((_, i) => current != i)
+        this.proposals = this.proposals.filter((_, i) => current != i)
     }
   }
 
@@ -231,12 +231,12 @@ export default class extends LitElement {
       Join group with ${groupName}?
       <button
         @click=${() => {
-        this.proposals = this.proposals.filterValue((_, i) => index != i)
+        this.proposals = this.proposals.filter((_, i) => index != i)
         action(true)
       }}>Accept</button>
       <button
         @click=${() => {
-        this.proposals = this.proposals.filterValue((_, i) => index != i)
+        this.proposals = this.proposals.filter((_, i) => index != i)
         action(false)
       }}>Reject</button>
       <br/>
@@ -248,7 +248,7 @@ export default class extends LitElement {
   private propose = (event: Event) => {
     event.preventDefault()
     try {
-      this.p2p.proposeGroup(...this.clients.filterValue((_, index) => this.acks[index]))
+      this.p2p.proposeGroup(...this.clients.filter((_, index) => this.acks[index]))
     } catch (err) {
       this.log = err
     }
