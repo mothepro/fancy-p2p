@@ -1,4 +1,4 @@
-import { SingleEmitter, Emitter, Listener, filter } from 'fancy-emitter'
+import { SingleEmitter, Emitter, Listener, filterValue } from 'fancy-emitter'
 import type { Name } from '@mothepro/signaling-lobby'
 import RTC, { Sendable, State } from '@mothepro/ez-rtc'
 import Client from './Client.js'
@@ -27,7 +27,7 @@ export default class <T extends Sendable = Sendable> implements SimplePeer<T> {
     this.rtc.message.on(this.message.activate)
 
     try {
-      await filter(this.rtc.statusChange, State.OFFLINE)
+      await filterValue(this.rtc.statusChange, State.OFFLINE)
       this.message.cancel()
     } catch (err) {
       this.message.deactivate(err)
@@ -61,7 +61,7 @@ export default class <T extends Sendable = Sendable> implements SimplePeer<T> {
       try {
         this.rtc = new RTC(stuns)
         // TODO see if this can be done after SDP exchange
-        const isReady = filter(this.rtc.statusChange, State.CONNECTED)
+        const isReady = filterValue(this.rtc.statusChange, State.CONNECTED)
 
         // Exchange the SDPs
         if (await isOpener.event) {

@@ -52,6 +52,6 @@
   },
   "dependencies": {
     "@mothepro/ez-rtc": "^0.0.7",
-    "fancy-emitter": "^1.4.0"
+    "fancy-emitter": "^1.5.1"
   }
 }
