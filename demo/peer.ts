@@ -2,6 +2,7 @@ import { LitElement, html, customElement, property } from 'lit-element'
 import { filterValue, Listener } from 'fancy-emitter'
 import P2P, { State, SimpleClient, SimplePeer } from '../index.js'
 import config from './server-config.js'
+import './lobby.js'
 import './log.js'
 
 const enum Message {
@@ -15,6 +16,8 @@ interface ChangeEvent extends KeyboardEvent {
     value: string
   }
 }
+type LogEvent = CustomEvent<any>
+type ProposeEvent = CustomEvent<SimpleClient[]>
 
 @customElement('lit-peer')
 export default class extends LitElement {
@@ -26,21 +29,6 @@ export default class extends LitElement {
 
   @property({ type: Number })
   private timeout?: number
-
-  /** Others connected to the lobby. */
-  @property({ attribute: false, type: Array })
-  private clients: SimpleClient[] = []
-
-  /** Clients that we would like to include in our group */
-  @property({ attribute: false, type: Array })
-  private acks: boolean[] = []
-
-  /** List of incoming proposals */
-  @property({ attribute: false, type: Array })
-  private proposals: {
-    groupName: string
-    action: (accept: boolean) => void
-  }[] = []
 
   @property({ attribute: false, type: String })
   private log: any = 'Initiated with State 0'
@@ -73,69 +61,16 @@ export default class extends LitElement {
       .catch(err => this.log = ['status deactivated', err])
       .finally(() => {
         this.log = 'State will no longer be updated'
-        // clear what we know...
-        this.clients = []
-        this.acks = []
+        
       })
 
-    this.bindClient()
     this.bindReady()
-    this.bindProposals()
-  }
-
-  private async bindClient() {
-    for await (const client of this.p2p.connection) {
-      this.log = `${client.name} has joined the lobby`
-      this.clients = [...this.clients, client]
-      this.acks = [...this.acks, false]
-
-      client.disconnect.once(() => {
-        this.log = `${client.name} has left the lobby`
-        this.acks = this.acks.filter((_, i) => i != this.clients.indexOf(client))
-        this.clients = this.clients.filter(curr => curr != client)
-      })
-    }
   }
 
   private async bindReady() {
     await filterValue(this.p2p.stateChange, State.READY)
     for (const peer of this.p2p.peers)
       this.bindMessage(peer)
-    this.clients = []
-    this.acks = []
-  }
-
-  private async bindProposals() {
-    for await (const { members, ack, action, client } of this.p2p.initiator) {
-      const names = members.map(({ name }) => name).join(', ')
-      this.log = `${client ? client.name : ''} proposed a group for ${names} & you`
-      this.bindAck(names, ack, action)
-    }
-  }
-
-  private async bindAck(groupName: string, ack: Listener<SimpleClient>, action?: (accept: boolean) => void) {
-    const current = action
-      ? this.proposals.length // the index of the proposal we may add
-      : undefined
-
-    if (action) // proposal that we can accept or reject
-      this.proposals = [...this.proposals, { groupName, action }]
-
-    try {
-      for await (const { name } of ack) {
-        this.log = `${name} accepted invitation with ${groupName} & you`
-      }
-    } catch (err) {
-      this.log = [
-        err?.client
-          ? `${err.client ? err.client.name : ''} rejected invitation to group with ${groupName} & you`
-          : `Group with ${groupName} & you was shut down`,
-        err
-      ]
-    } finally { // Remove the proposal once it is completed.
-      if (typeof current == 'number')
-        this.proposals = this.proposals.filter((_, i) => current != i)
-    }
   }
 
   private async bindMessage({ name, message, send }: SimplePeer) {
@@ -168,17 +103,27 @@ export default class extends LitElement {
           this.chat = `${name} says "${data}"`
       }
     } catch (err) {
+      console.log('bindmessage')
       this.log = [`Connection with ${name} closed`, err]
     }
   }
 
-  render = () => html`${{ // "switch" statement in string
+  render = () => html`${this.p2p && this.p2p.stateChange.isAlive && { // "switch" statement in string
     [State.OFFLINE]: 'P2P is offline',
-    [State.LOBBY]: this.renderLobby(),
+    [State.LOBBY]: html`
+      <lit-lobby
+        .connection=${this.p2p.connection}
+        @log=${({detail}: LogEvent) => this.log = detail}
+        @proposeGroup=${({detail}: ProposeEvent) => { try { this.p2p.proposeGroup(...detail) } catch (err) { this.log = err }}}
+      ></lit-lobby>`,
     [State.LOADING]: 'Loading...',
     [State.READY]: this.renderReady(),
-  }[this.p2p?.state || State.OFFLINE]}
-  <lit-log .entry=${this.log}></lit-log>`
+  }[this.p2p!.state]}
+
+  <lit-log
+    .entry=${this.log}
+    ?open=${this.p2p && !this.p2p!.stateChange.isAlive}
+  ></lit-log>`
 
   /** We have direct connections. */
   private renderReady = () => this.p2p && html`
@@ -203,56 +148,8 @@ export default class extends LitElement {
     <button @click=${this.genRandom}>Generate Random Number</button>
     <lit-log open .entry=${this.chat}>Chat</lit-log>`
 
-  /** Chilling in the lobby. */
-  private renderLobby = () => !!this.clients.length
-    ? html`
-    Clients connected to this lobby
-    <form @submit=${this.propose}>
-      <ul id="others">
-        ${[...this.clients].map(({ name }, index) => html`
-        <li>
-          <label>
-            <input
-              type="checkbox"
-              ?checked=${this.acks[index]}
-              @click=${() => this.acks = this.acks.map((ack, i) => index == i ? !ack : ack)}
-            />
-            ${name}     
-          </label>
-        </li>`)}
-      </ul>
-      <input
-        type="submit"
-        value="Propose Group"
-        ?disabled=${!this.acks.some(ack => ack)}
-      />
-    </form>
-    ${this.proposals.map(({ groupName, action }, index) => html`
-      Join group with ${groupName}?
-      <button
-        @click=${() => {
-        this.proposals = this.proposals.filter((_, i) => index != i)
-        action(true)
-      }}>Accept</button>
-      <button
-        @click=${() => {
-        this.proposals = this.proposals.filter((_, i) => index != i)
-        action(false)
-      }}>Reject</button>
-      <br/>
-    `)}`
-    : 'No one else has joined this lobby... yet.'
 
   // The following methods seem redundant...
-
-  private propose = (event: Event) => {
-    event.preventDefault()
-    try {
-      this.p2p.proposeGroup(...this.clients.filter((_, index) => this.acks[index]))
-    } catch (err) {
-      this.log = err
-    }
-  }
 
   private broadcast = (event: Event) => {
     event.preventDefault()
