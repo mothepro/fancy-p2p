@@ -1,15 +1,15 @@
-import { LitElement, html, customElement, property, css } from 'lit-element'
+import { LitElement, html, customElement, property, css, internalProperty } from 'lit-element'
 
 @customElement('lit-log')
 export default class extends LitElement {
-  @property({ type: Array, attribute: false })
+  @internalProperty()
   private entries: Array<{ date: Date, entry: any }> = []
 
   @property({ type: Boolean })
-  private open = false
+  open = false
 
   @property()
-  private entry: any
+  entry: any
 
   static readonly styles = css`
     :host {
@@ -18,10 +18,9 @@ export default class extends LitElement {
     }
     .error {
       color: red
-    }
-  `
+    }`
 
-  updated(attrs: Map<string, string>) {
+  protected updated(attrs: Map<string, string>) {
     if (attrs.has('entry') && this.entry && this.entry != attrs.get('entry')) {
       if (Array.isArray(this.entry))
         for (const entry of this.entry)
@@ -31,18 +30,17 @@ export default class extends LitElement {
     }
   }
 
-  render = () => html`
-  <details ?open=${this.open}>
-    <summary><slot></slot> Log</summary>
+  protected readonly render = () => html`
+    <details ?open=${this.open}>
+      <summary><slot></slot> Log</summary>
 
-    ${this.entries.map(({ date, entry }) => html`
-      <pre
-        title="${date.toLocaleTimeString()}"
-        class=${entry instanceof Error ? 'error' : ''}
-      >${entry instanceof Error
+      ${this.entries.map(({ date, entry }) => html`
+        <pre
+          title="${date.toLocaleTimeString()}"
+          class=${entry instanceof Error ? 'error' : ''}
+        >${entry instanceof Error
       ? entry.stack ? entry.stack : entry.message // Stack isn't always available
       : entry
     }</pre>`)}
-  </details>
-  `
+    </details>`
 }
