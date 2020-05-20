@@ -93,7 +93,7 @@ export default class {
               this.groups.get(members.hash)!.activate(this.getClient(actor))
             } else {
               let err: Error & { client?: SimpleClient } = Error(`Group with ${members} was rejected.`)
-              if (this.allClients.has(id))
+              if (this.allClients.has(actor))
                 err.client = this.getClient(actor)
               this.groups.get(members.hash)?.deactivate(err)
               this.groups.delete(members.hash)
