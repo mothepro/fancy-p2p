@@ -125,18 +125,12 @@ export default class {
   }
 
   constructor(address: string, private readonly lobby: LobbyID, private readonly name: Name) {
-    try {
-      this.server = new WebSocket(address)
-      this.server.addEventListener('open', this.ready.activate)
-      this.server.addEventListener('close', this.close.activate)
-      this.server.addEventListener('error', () => this.close.deactivate(Error('Connection to Server closed unexpectedly.')))
-      this.server.addEventListener('message', async ({ data }) => data instanceof Blob
-        && this.message.activate(new DataView(await data.arrayBuffer())))
-    } catch (err) {
-      this.close.deactivate(err)
-      if (this.server)
-        this.server.close()
-    }
+    this.server = new WebSocket(address)
+    this.server.addEventListener('open', this.ready.activate)
+    this.server.addEventListener('close', this.close.activate)
+    this.server.addEventListener('error', () => this.close.deactivate(Error('Connection to Server closed unexpectedly.')))
+    this.server.addEventListener('message', async ({ data }) => data instanceof Blob
+      && this.message.activate(new DataView(await data.arrayBuffer())))
   }
 
   /** Proposes a group to the server and returns the emitter that will be activated when clients accept it. */
