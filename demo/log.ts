@@ -39,14 +39,18 @@ export default class extends LitElement {
     if (attrs.has('entry') && this.entry && this.entry != attrs.get('entry')) {
       if (Array.isArray(this.entry))
         for (const entry of this.entry)
-          this.entries = [{ entry, date: new Date }, ...this.entries]
+          this.prependEntry(entry)
       else
-        this.entries = [{ entry: this.entry, date: new Date }, ...this.entries]
+        this.prependEntry(this.entry)
     }
   }
 
+  protected prependEntry(entry: LogEntry) {
+    this.entries = [{ entry, date: new Date }, ...this.entries]
+  }
+
   protected readonly render = () => html`
-    <slot @log=${({ detail }: CustomEvent<LogEntry>) => this.entry = detail}></slot>
+    <slot @log=${({ detail }: CustomEvent<LogEntry>) => this.prependEntry(detail)}></slot>
 
     <details ?open=${this.open}>
       <summary>
