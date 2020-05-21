@@ -40,7 +40,7 @@ export default class extends LitElement {
   }
 
   private async bindProposals(client: SimpleClient) {
-    for await (const { members, ack, action } of client.initiator) {
+    for await (const { members, ack, action } of client.initiator) { // TODO also support own proposals
       const names = members.map(({ name }) => name).join(', ')
       this.dispatchEvent(new CustomEvent('log', { detail: `${client ? client.name : ''} proposed a group for ${names} & you` }))
       this.bindAck(names, ack, action)

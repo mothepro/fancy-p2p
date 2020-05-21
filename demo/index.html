@@ -22,12 +22,14 @@
     <input type="submit" value="Connect">
   </form>
 
+  <lit-log id="log"></lit-log>
+
   <!-- Add `lit-peer` element with the attributes if the query parameters are set. -->
   <script>
     const params = new URLSearchParams(location.search)
     if (params.has('name')) {
       document.getElementById('namer').remove()
-      document.body.innerHTML += `<lit-peer name=${params.get('name')} retries=5 timeout=5000></lit-peer>`
+      document.getElementById('log').innerHTML += `<lit-peer name=${params.get('name')} retries=5 timeout=5000></lit-peer>`
     }
   </script>
 </body>
