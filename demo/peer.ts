@@ -1,4 +1,4 @@
-import { LitElement, html, customElement, property } from 'lit-element'
+import { LitElement, html, customElement, property, internalProperty } from 'lit-element'
 import type { Sendable } from '@mothepro/ez-rtc'
 import type { LogEntry } from './log.js'
 import P2P, { State, SimpleClient } from '../index.js'
@@ -14,6 +14,7 @@ declare global {
   interface HTMLElementEventMap {
     broadcast: BroadcastEvent
     proposal: ProposeGroupEvent
+    requestRNG: CustomEvent<void>
   }
 }
 
@@ -28,6 +29,9 @@ export default class extends LitElement {
   @property({ type: Number })
   private timeout?: number
 
+  @internalProperty()
+  private random = 0
+
   private p2p?: P2P
 
   private readonly log = (...detail: LogEntry) =>
@@ -37,10 +41,12 @@ export default class extends LitElement {
   protected async firstUpdated() {
     this.p2p = new P2P(config.signaling, config.stuns, 0, this.name, this.retries, this.timeout)
     try {
-      for await (const state of this.p2p.stateChange)
+      for await (const state of this.p2p.stateChange) {
         this.log(`State changed to ${state}`)
-    }
-    catch (err) {
+        if (state == State.READY)
+          this.random = this.p2p.random(true)
+      }
+    } catch (err) {
       this.log('State deactivated', err)
     }
     this.log('State will no longer be updated')
@@ -79,8 +85,9 @@ export default class extends LitElement {
           return html`
             <lit-direct
               .peers=${[...this.p2p.peers]}
-              .random=${this.p2p.random}
+              next-random=${this.random}
               @broadcast=${this.broadcast}
+              @requestRNG=${() => this.random = this.p2p!.random(true)}
             ></lit-direct>`
       }
 
