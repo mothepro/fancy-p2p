@@ -1,6 +1,7 @@
 import { LitElement, html, customElement, property, internalProperty } from 'lit-element'
 import { Listener } from 'fancy-emitter'
 import type { SimpleClient } from '../index.js'
+import type { LogEntry } from './log.js'
 
 @customElement('lit-lobby')
 export default class extends LitElement {
@@ -23,10 +24,15 @@ export default class extends LitElement {
     action: (accept: boolean) => void
   }[] = []
 
+  private log(...detail: LogEntry[]) {
+    this.dispatchEvent(new CustomEvent('log', { detail, bubbles: true }))
+    this.requestUpdate()
+  }
+
   protected async firstUpdated() {
     for await (const client of this.connection) {
-      this.dispatchEvent(new CustomEvent('log', { detail: `${client.name} has joined the lobby` }))
       this.clients = [...this.clients, { client, ack: false }]
+      this.log(`${client.name} has joined the lobby`)
 
       this.bindProposals(client)
       this.bindDisconnection(client)
@@ -35,14 +41,14 @@ export default class extends LitElement {
 
   private async bindDisconnection(client: SimpleClient) {
     await client.disconnect.event
-    this.dispatchEvent(new CustomEvent('log', { detail: `${client.name} has left the lobby` }))
     this.clients = this.clients.filter(({ client: currentClient }) => currentClient != client)
+    this.log(`${client.name} has left the lobby`)
   }
 
   private async bindProposals(client: SimpleClient) {
     for await (const { members, ack, action } of client.initiator) { // TODO also support own proposals
       const names = members.map(({ name }) => name).join(', ')
-      this.dispatchEvent(new CustomEvent('log', { detail: `${client ? client.name : ''} proposed a group for ${names} & you` }))
+      this.log(`${client ? client.name : ''} proposed a group for ${names} & you`)
       this.bindAck(names, ack, action)
     }
   }
@@ -57,16 +63,13 @@ export default class extends LitElement {
 
     try {
       for await (const { name } of ack)
-        this.dispatchEvent(new CustomEvent('log', { detail: `${name} accepted invitation with ${groupName} & you` }))
+        this.log(`${name} accepted invitation with ${groupName} & you`)
     } catch (err) {
-      this.dispatchEvent(new CustomEvent('log', {
-        detail: [
-          err.client
-            ? `${err.client.name} rejected invitation to group with ${groupName} & you`
-            : `Group with ${groupName} & you was shut down`,
-          err
-        ]
-      }))
+      this.log(
+        err.client
+          ? `${err.client.name} rejected invitation to group with ${groupName} & you`
+          : `Group with ${groupName} & you was shut down`,
+        err)
     } finally { // Remove the proposal once it is completed.
       if (typeof current == 'number')
         this.proposals = this.proposals.filter((_, i) => current != i)
@@ -79,7 +82,7 @@ export default class extends LitElement {
     Clients connected to this lobby
     <form
       @submit=${(event: Event) => // Propose group of all the ack'd clients
-      this.dispatchEvent(new CustomEvent('proposeGroup', {
+        this.dispatchEvent(new CustomEvent('proposeGroup', {
           detail: this.clients
             .filter(({ ack }) => ack)
             .map(({ client }) => client)

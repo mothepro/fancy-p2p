@@ -46,7 +46,7 @@ export default class extends LitElement {
   }
 
   protected readonly render = () => html`
-    <slot @log=${({ detail }: CustomEvent<LogEntry>) => this.entry = detail}>h</slot>
+    <slot @log=${({ detail }: CustomEvent<LogEntry>) => this.entry = detail}></slot>
 
     <details ?open=${this.open}>
       <summary>
