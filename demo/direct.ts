@@ -93,8 +93,8 @@ export default class extends LitElement {
   protected readonly render = () => html`
       Peers
       <ul>
-      ${[...this.peers].map(({ name }) => html`
-        <li>${name}</li>`)}
+      ${[...this.peers].map(peer => html`
+        <li @click=${this.sendDirect(peer)}>${peer.name}</li>`)}
       </ul>
       <form @submit=${this.sendData}>
         <input
@@ -115,6 +115,13 @@ export default class extends LitElement {
     event.preventDefault()
     this.dispatchEvent(new CustomEvent('broadcast', { detail: this.data, bubbles: true }))
     this.log(`Broadcasted "${this.data}"`)
+    this.data = ''
+  }
+
+  private sendDirect = ({ name, send }: SimplePeer) => (event: Event) => {
+    event.preventDefault()
+    send(this.data)
+    this.log(`Sending ${name} "${this.data}"`)
     this.data = ''
   }
 
