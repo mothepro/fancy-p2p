@@ -1,5 +1,6 @@
 import { LitElement, html, customElement, property, internalProperty } from 'lit-element'
 import { Listener } from 'fancy-emitter'
+import type P2P from '../src/P2P.js'
 import type { SimpleClient } from '../index.js'
 import type { LogEntry } from './log.js'
 
@@ -8,6 +9,10 @@ export default class extends LitElement {
   /** Activated when a client joins the lobby */
   @property({ attribute: false })
   connection!: Listener<SimpleClient>
+
+  /** Activated when a client joins the lobby */
+  @property({ attribute: false })
+  groupProposed!: P2P['initiator']
 
   /** Others connected to the lobby. */
   @internalProperty()
@@ -29,11 +34,10 @@ export default class extends LitElement {
     && this.requestUpdate()
 
   protected async firstUpdated() {
+    this.bindProposals()
     for await (const client of this.connection) {
       this.clients = [...this.clients, { client, ack: false }]
       this.log(`${client.name} has joined the lobby`)
-
-      this.bindProposals(client)
       this.bindDisconnection(client)
     }
   }
@@ -44,10 +48,10 @@ export default class extends LitElement {
     this.log(`${client.name} has left the lobby`)
   }
 
-  private async bindProposals(client: SimpleClient) {
-    for await (const { members, ack, action } of client.initiator) { // TODO also support own proposals
+  private async bindProposals() {
+    for await (const { members, ack, action, client } of this.groupProposed) {
       const names = members.map(({ name }) => name).join(', ')
-      this.log(`${client ? client.name : ''} proposed a group for ${names} & you`)
+      this.log(`${client ? client.name : 'You'} proposed a group for ${names} & you`)
       this.bindAck(names, ack, action)
     }
   }
