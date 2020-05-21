@@ -43,10 +43,11 @@ export default class extends LitElement {
   protected prependEntry(...entries: LogEntry[]) {
     for (const entry of entries)
       this.entries = [{ entry, date: new Date }, ...this.entries]
+    return true
   }
 
   protected readonly render = () => html`
-    <slot @log=${({ detail }: CustomEvent<LogEntry>) => this.prependEntry(...detail)}></slot>
+    <slot @log=${(e: CustomEvent<LogEntry>) => this.prependEntry(...e.detail) && e.stopPropagation()}></slot>
 
     <details ?open=${this.open}>
       <summary>
