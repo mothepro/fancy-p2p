@@ -13,7 +13,7 @@
   <!-- Development -->
   <script dev-only type=dev-only-application/javascript src="//unpkg.com/typescript@3.8.3/lib/typescript.js"></script>
   <script dev-only type=dev-only-module src="//unpkg.com/@mothepro/es-module-shims@0.0.0/dist/es-module-shims.min.js"></script>
-  <script dev-only type=dev-only-module-shim src="index.ts"></script>
+  <script dev-only type=dev-only-module-shim src="peer.ts"></script>
 </head>
 
 <body>
@@ -22,12 +22,14 @@
     <input type="submit" value="Connect">
   </form>
 
+  <lit-log id="log"></lit-log>
+
   <!-- Add `lit-peer` element with the attributes if the query parameters are set. -->
   <script>
     const params = new URLSearchParams(location.search)
     if (params.has('name')) {
       document.getElementById('namer').remove()
-      document.body.innerHTML += `<lit-peer name=${params.get('name')} retries=5 timeout=5000></lit-peer>`
+      document.getElementById('log').innerHTML += `<lit-peer name=${params.get('name')} retries=5 timeout=5000></lit-peer>`
     }
   </script>
 </body>
