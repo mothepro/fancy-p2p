@@ -26,7 +26,7 @@ export default class extends LitElement {
   static readonly styles = css`
     :host {
       display: block;
-      margin: 1em;
+      margin: 0.5em;
     }
     :host details {
       margin-top: 1em;
@@ -36,21 +36,17 @@ export default class extends LitElement {
     }`
 
   protected updated(attrs: Map<string, string>) {
-    if (attrs.has('entry') && this.entry && this.entry != attrs.get('entry')) {
-      if (Array.isArray(this.entry))
-        for (const entry of this.entry)
-          this.prependEntry(entry)
-      else
-        this.prependEntry(this.entry)
-    }
+    if (attrs.has('entry') && this.entry && this.entry != attrs.get('entry'))
+      this.prependEntry(this.entry)
   }
 
-  protected prependEntry(entry: LogEntry) {
-    this.entries = [{ entry, date: new Date }, ...this.entries]
+  protected prependEntry(...entries: LogEntry[]) {
+    for (const entry of entries)
+      this.entries = [{ entry, date: new Date }, ...this.entries]
   }
 
   protected readonly render = () => html`
-    <slot @log=${({ detail }: CustomEvent<LogEntry>) => this.prependEntry(detail)}></slot>
+    <slot @log=${({ detail }: CustomEvent<LogEntry>) => this.prependEntry(...detail)}></slot>
 
     <details ?open=${this.open}>
       <summary>
@@ -63,9 +59,9 @@ export default class extends LitElement {
           title="${date.toLocaleTimeString()}"
           class=${entry instanceof Error ? 'error' : ''}
         >${
-        entry instanceof Error
-          ? entry.stack ? entry.stack : entry.message // Stack isn't always available
-          : entry}
+    entry instanceof Error
+      ? entry.stack ? entry.stack : entry.message // Stack isn't always available
+      : entry}
         </pre>`)}
     </details>`
 }
