@@ -69,7 +69,7 @@ export default class extends LitElement {
 
             case Message.RTT:
               if (this.initRtt) {
-                this.log(`Round Trip Time with ${name} is ${this.elapsedTime - this.initRtt}μs`)
+                this.chat = `Round Trip Time with ${name} is ${this.elapsedTime - this.initRtt}μs`
                 this.replies++
               } else
                 send(new Uint8Array([Message.RTT]))
