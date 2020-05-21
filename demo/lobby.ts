@@ -24,10 +24,9 @@ export default class extends LitElement {
     action: (accept: boolean) => void
   }[] = []
 
-  private log(...detail: LogEntry[]) {
-    this.dispatchEvent(new CustomEvent('log', { detail, bubbles: true }))
-    this.requestUpdate()
-  }
+  private readonly log = (...detail: LogEntry) =>
+    this.dispatchEvent(new CustomEvent('log', { detail, bubbles: true, composed: true }))
+    && this.requestUpdate()
 
   protected async firstUpdated() {
     for await (const client of this.connection) {
@@ -54,9 +53,7 @@ export default class extends LitElement {
   }
 
   private async bindAck(groupName: string, ack: Listener<SimpleClient>, action?: (accept: boolean) => void) {
-    const current = action
-      ? this.proposals.length // the index of the proposal we may add
-      : undefined
+    const current = this.proposals.length // the index of the proposal we may add
 
     if (action) // proposal that we can accept or reject
       this.proposals = [...this.proposals, { groupName, action }]
@@ -71,7 +68,7 @@ export default class extends LitElement {
           : `Group with ${groupName} & you was shut down`,
         err)
     } finally { // Remove the proposal once it is completed.
-      if (typeof current == 'number')
+      if (action)
         this.proposals = this.proposals.filter((_, i) => current != i)
     }
   }

@@ -55,8 +55,6 @@ export default class <T extends Sendable = Sendable> implements SimplePeer<T> {
   }
 
   private async makeRtc(stuns: string[], { isOpener, acceptor, creator }: Client, retries: number, timeout: number) {
-    const reasons: Error[] = []
-
     for (let attempt = 0; attempt < Math.max(1, retries); attempt++)
       try {
         this.rtc = new RTC(stuns)

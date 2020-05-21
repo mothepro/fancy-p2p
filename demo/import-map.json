@@ -1,8 +1,8 @@
 
 {
 	"imports": {
-		"@mothepro/ez-rtc/": "https://unpkg.com/@mothepro/ez-rtc@0.0.7/",
-		"@mothepro/ez-rtc": "https://unpkg.com/@mothepro/ez-rtc@0.0.7/dist/esm/index.js",
+		"@mothepro/ez-rtc/": "https://unpkg.com/@mothepro/ez-rtc@0.0.8/",
+		"@mothepro/ez-rtc": "https://unpkg.com/@mothepro/ez-rtc@0.0.8/dist/esm/index.js",
     "fancy-emitter/": "https://unpkg.com/fancy-emitter@1.5.1/",
     "fancy-emitter": "https://unpkg.com/fancy-emitter@1.5.1/dist/esm/index.js",
     "lit-element/": "//unpkg.com/lit-element@2.3.1/",
