@@ -11,4 +11,4 @@ if (params.has('name'))
       retries=5
       timeout=5000
     ></lit-peer>`,
-    document.getElementById('log')!)
+    document.getElementById('main')!)
