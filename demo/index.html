@@ -9,29 +9,20 @@
   <script type="importmap-shim" src="import-map.json"></script>
   <!-- Production -->
   <script prod-only type=prod-only-module src="//unpkg.com/es-module-shims@0.4.6/dist/es-module-shims.min.js"></script>
-  <script prod-only type=prod-only-module-shim src="//unpkg.com/@mothepro/fancy-p2p/dist/esm/demo/peer.js"></script>
+  <script prod-only type=prod-only-module-shim src="//unpkg.com/@mothepro/fancy-p2p/dist/esm/demo/index.js"></script>
   <!-- Development -->
   <script dev-only type=application/javascript src="//unpkg.com/typescript@3.8.3/lib/typescript.js"></script>
   <script dev-only type=module src="//unpkg.com/@mothepro/es-module-shims@0.0.0/dist/es-module-shims.min.js"></script>
-  <script dev-only type=module-shim src="peer.ts"></script>
+  <script dev-only type=module-shim src="index.ts"></script>
 </head>
 
 <body>
-  <form id="namer">
-    <input required type="text" name="name" placeholder="Name" />
-    <input type="submit" value="Connect">
-  </form>
-
-  <lit-log id="log"></lit-log>
-
-  <!-- Add `lit-peer` element with the attributes if the query parameters are set. -->
-  <script>
-    const params = new URLSearchParams(location.search)
-    if (params.has('name')) {
-      document.getElementById('namer').remove()
-      document.getElementById('log').innerHTML += `<lit-peer name=${params.get('name')} retries=5 timeout=5000></lit-peer>`
-    }
-  </script>
+  <lit-log id="log">
+    <form id="namer">
+      <input required type="text" name="name" placeholder="Name" />
+      <input type="submit" value="Connect">
+    </form>
+  </lit-log>
 </body>
 
 </html>
