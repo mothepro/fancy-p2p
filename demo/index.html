@@ -17,19 +17,12 @@
 </head>
 
 <body>
-  <form id="namer">
-    <input required type="text" name="name" placeholder="Name" />
-    <input type="submit" value="Connect">
-  </form>
-
-  <!-- Add `lit-peer` element with the attributes if the query parameters are set. -->
-  <script>
-    const params = new URLSearchParams(location.search)
-    if (params.has('name')) {
-      document.getElementById('namer').remove()
-      document.body.innerHTML += `<lit-peer name=${params.get('name')} retries=5 timeout=5000></lit-peer>`
-    }
-  </script>
+  <lit-log id="main">
+    <form>
+      <input required type="text" name="name" placeholder="Name" />
+      <input type="submit" value="Connect">
+    </form>
+  </lit-log>
 </body>
 
 </html>

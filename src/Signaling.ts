@@ -83,7 +83,7 @@ export default class {
                     this.serverSend(buildProposal(accept, ...members))
                     // Make DRY with switch
                     if (!accept) {
-                      this.groups.get(members.hash)?.deactivate(new Error(`Rejected group with ${members}.`))
+                      this.groups.get(members.hash)?.deactivate(new Error(`Rejected group with ${[...members]}.`))
                       this.groups.delete(members.hash)
                     }
                   }
@@ -92,8 +92,8 @@ export default class {
               // TODO decide if that should be in an else
               this.groups.get(members.hash)!.activate(this.getClient(actor))
             } else {
-              let err: Error & { client?: SimpleClient } = Error(`Group with ${members} was rejected.`)
-              if (this.allClients.has(id))
+              let err: Error & { client?: SimpleClient } = Error(`Group with ${[...members]} was rejected.`)
+              if (this.allClients.has(actor))
                 err.client = this.getClient(actor)
               this.groups.get(members.hash)?.deactivate(err)
               this.groups.delete(members.hash)
@@ -125,18 +125,12 @@ export default class {
   }
 
   constructor(address: string, private readonly lobby: LobbyID, private readonly name: Name) {
-    try {
-      this.server = new WebSocket(address)
-      this.server.addEventListener('open', this.ready.activate)
-      this.server.addEventListener('close', this.close.activate)
-      this.server.addEventListener('error', () => this.close.deactivate(Error('Connection to Server closed unexpectedly.')))
-      this.server.addEventListener('message', async ({ data }) => data instanceof Blob
-        && this.message.activate(new DataView(await data.arrayBuffer())))
-    } catch (err) {
-      this.close.deactivate(err)
-      if (this.server)
-        this.server.close()
-    }
+    this.server = new WebSocket(address)
+    this.server.binaryType = 'arraybuffer'
+    this.server.addEventListener('open', this.ready.activate)
+    this.server.addEventListener('close', this.close.activate)
+    this.server.addEventListener('error', () => this.close.deactivate(Error('Connection to Server closed unexpectedly.')))
+    this.server.addEventListener('message', async ({ data }) => this.message.activate(new DataView(data)))
   }
 
   /** Proposes a group to the server and returns the emitter that will be activated when clients accept it. */
