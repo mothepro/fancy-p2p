@@ -4,9 +4,12 @@ import type { SimplePeer } from '../index.js'
 import './log.js'
 
 const enum Message {
+  CHECK,
   RTT,
   GENERATE_RANDOM,
 }
+
+const orderTestLimit = 5e4
 
 declare global {
   interface KeyboardEvent {
@@ -37,6 +40,10 @@ export default class extends LitElement {
 
   private replies = 0
 
+  private orderedMessages: number[] = []
+
+  private readonly limit = 5e4
+
   /**
    * Number of microseconds have passed since the page has opened.
    * Could be innaccurate due to https://developer.mozilla.org/en-US/docs/Web/API/Performance/now#Reduced_time_precision
@@ -58,10 +65,23 @@ export default class extends LitElement {
     try {
       for await (const data of message) {
         if (data instanceof ArrayBuffer) {
-          if (data.byteLength != 1)
-            throw Error(`${name} sent an ArrayBuffer(${data.byteLength}), only expecting buffers of size 1`)
+          const view = new DataView(data)
+          // if (data.byteLength != 1)
+          //   throw Error(`${name} sent an ArrayBuffer(${data.byteLength}), only expecting buffers of size 1`)
 
-          switch (new DataView(data).getInt8(0)) {
+          switch (view.getInt8(0)) {
+            case Message.CHECK:
+              this.orderedMessages.push(view.getUint32(1, true))
+              if (this.orderedMessages.length == orderTestLimit) {
+                for (let i = 0; i < this.orderedMessages.length - 1; i++) {
+                  if (this.orderedMessages[i] > this.orderedMessages[i + 1])
+                    this.log(this.orderedMessages[i], 'should have come before', this.orderedMessages[i + 1])
+                }
+                this.chat = `Finished checking order of ${orderTestLimit} messages`
+                this.orderedMessages.length = 0
+              }
+              break
+            
             case Message.GENERATE_RANDOM:
               this.chat = `${name} shared the random integer ${this.nextRandom} for us`
               this.dispatchEvent(new CustomEvent('requestRNG', { bubbles: true }))
@@ -82,7 +102,7 @@ export default class extends LitElement {
               break
 
             default:
-              throw Error(`${name} sent unexpected byte ${data}`)
+              throw Error(`${name} sent unexpected ${view.byteLength} bytes ${view}`)
           }
         } else
           this.chat = `${name} says "${data}"`
@@ -116,6 +136,10 @@ export default class extends LitElement {
       </form>
       <button @click=${this.sendRtt}>Latency Check</button>
       <button @click=${this.sendRandom}>Generate Random Number</button>
+      <button
+        @click=${this.orderTest} 
+        title=${`Sends ${orderTestLimit} packets and peers are expected to receive them all in order.`}
+      >Order check</button>
     </lit-log>`
 
   private sendData = (event: Event) => {
@@ -131,7 +155,7 @@ export default class extends LitElement {
       send(this.data)
       this.log(`Sending ${name} "${this.data}"`)
       this.data = ''
-    } catch(err) {
+    } catch (err) {
       this.log(err)
     }
   }
@@ -147,5 +171,15 @@ export default class extends LitElement {
     event.preventDefault()
     this.initRtt = this.elapsedTime
     this.dispatchEvent(new CustomEvent('broadcast', { detail: new Uint8Array([Message.RTT]), bubbles: true }))
+  }
+
+  private orderTest = (event: Event) => {
+    event.preventDefault()
+    const detail = new DataView(new ArrayBuffer(1 + 4))
+    detail.setInt8(0, Message.CHECK)
+    for (let i = 0; i < orderTestLimit; i++) {
+      detail.setUint32(1, i, true)
+      this.dispatchEvent(new CustomEvent('broadcast', { detail, bubbles: true }))
+    }
   }
 }

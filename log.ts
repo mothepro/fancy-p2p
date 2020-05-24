@@ -51,8 +51,7 @@ export default class extends LitElement {
 
     <details ?open=${this.open}>
       <summary>
-        <slot name="summary"></slot>
-        Log
+        <slot name="summary">Log</slot>
       </summary>
 
       ${this.entries.map(({ date, entry }) => html`
@@ -60,9 +59,9 @@ export default class extends LitElement {
           title="${date.toLocaleTimeString()}"
           class=${entry instanceof Error ? 'error' : ''}
         >${
-    entry instanceof Error
-      ? entry.stack ? entry.stack : entry.message // Stack isn't always available
-      : entry}
+        entry instanceof Error
+          ? entry.stack ? entry.stack : entry.message // Stack isn't always available
+          : entry}
         </pre>`)}
     </details>`
 }
