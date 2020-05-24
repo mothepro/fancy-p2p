@@ -1,7 +1,7 @@
 import { LitElement, html, customElement, property, internalProperty } from 'lit-element'
-import type { LogEntry } from './log.js'
+import 'lit-log'
+import type { LogEntry } from 'lit-log'
 import type { SimplePeer } from '../index.js'
-import './log.js'
 
 const enum Message {
   CHECK,

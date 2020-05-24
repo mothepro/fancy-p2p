@@ -2,7 +2,7 @@ import { LitElement, html, customElement, property, internalProperty } from 'lit
 import { Listener } from 'fancy-emitter'
 import type P2P from '../src/P2P.js'
 import type { SimpleClient } from '../index.js'
-import type { LogEntry } from './log.js'
+import type { LogEntry } from 'lit-log'
 
 @customElement('lit-lobby')
 export default class extends LitElement {
