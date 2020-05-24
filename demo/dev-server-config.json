@@ -1,6 +1,0 @@
-{
-  "signaling": "ws://localhost:12345",
-  "stuns": [
-    "stun:stun.l.google.com:19302"
-  ]
-}

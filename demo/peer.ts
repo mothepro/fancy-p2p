@@ -2,7 +2,7 @@ import { LitElement, html, customElement, property, internalProperty } from 'lit
 import type { Sendable } from '@mothepro/ez-rtc'
 import type { LogEntry } from 'lit-log'
 import P2P, { State, SimpleClient } from '../index.js'
-import config from './server-config.js'
+import { stuns, signaling } from './config.js'
 import './lobby.js'
 import './direct.js'
 
@@ -38,7 +38,7 @@ export default class extends LitElement {
     && this.requestUpdate()
 
   protected async firstUpdated() {
-    this.p2p = new P2P(config.signaling, config.stuns, 0, this.name, this.retries, this.timeout)
+    this.p2p = new P2P(signaling, stuns, 0, this.name, this.retries, this.timeout)
     try {
       for await (const state of this.p2p.stateChange) {
         this.log(`State changed to ${state}`)
