@@ -1,10 +1,9 @@
 import { LitElement, html, customElement, property, internalProperty } from 'lit-element'
 import type { Sendable } from '@mothepro/ez-rtc'
-import type { LogEntry } from './log.js'
+import type { LogEntry } from 'lit-log'
 import P2P, { State, SimpleClient } from '../index.js'
 import config from './server-config.js'
 import './lobby.js'
-import './log.js'
 import './direct.js'
 
 type ProposeGroupEvent = CustomEvent<SimpleClient[]>

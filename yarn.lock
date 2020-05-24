@@ -1690,6 +1690,13 @@ lit-html@^1.1.1:
   resolved "https://registry.yarnpkg.com/lit-html/-/lit-html-1.2.1.tgz#1fb933dc1e2ddc095f60b8086277d4fcd9d62cc8"
   integrity sha512-GSJHHXMGLZDzTRq59IUfL9FCdAlGfqNp/dEa7k7aBaaWD+JKaCjsAk9KYm2V12ItonVaYx2dprN66Zdm1AuBTQ==
 
+lit-log@^0.0.1:
+  version "0.0.1"
+  resolved "https://registry.yarnpkg.com/lit-log/-/lit-log-0.0.1.tgz#4b3b3f4d449c992af2b8990d6dba6e27719683b3"
+  integrity sha512-WqO8sKROmc3yYf/UR3IVJDgXBwy5eqor+f5zGGJsC+dvBq/bhD3uDFoxr2rBjxXOWPop9M8w6nEY4uL4m3wDYA==
+  dependencies:
+    lit-element "^2.3.1"
+
 locate-path@^3.0.0:
   version "3.0.0"
   resolved "https://registry.yarnpkg.com/locate-path/-/locate-path-3.0.0.tgz#dbec3b3ab759758071b58fe59fc41871af21400e"
