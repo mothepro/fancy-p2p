@@ -44,7 +44,7 @@ export default class <T extends Sendable = Sendable> implements SimplePeer<T> {
     this.rtc.send(data)
   }
 
-  constructor(stuns: string[], client: Client, retries = 1, timeout = 10 * 1000) {
+  constructor(stuns: string[], client: Client, retries = 1, timeout = -1) {
     this.name = client.name
     this.makeRtc(stuns, client, retries, timeout)
       .then(this.ready.activate)
@@ -71,13 +71,10 @@ export default class <T extends Sendable = Sendable> implements SimplePeer<T> {
         }
 
         // Wait until ready, or timeout if possible.
-        if (timeout)
-          await Promise.race([
-            filterValue(this.rtc.statusChange, State.CONNECTED),
-            delay(timeout).then(() => Promise.reject(Error(`Connection didn't become ready in ${timeout}ms`))),
-          ])
-        else
-          await filterValue(this.rtc.statusChange, State.CONNECTED)
+        await Promise.race([
+          filterValue(this.rtc.statusChange, State.READY),
+          delay(timeout).then(() => Promise.reject(Error(`Connection didn't become ready in ${timeout}ms`))),
+        ])
 
         return // leave function behind... we are good :)
       } catch (err) {

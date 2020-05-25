@@ -28,7 +28,9 @@ export default class <T extends Sendable = Sendable> {
   private readonly server: Signaling
 
   /** Activated when the state changes, Cancels when finalized, Deactivates when error is throw. */
-  readonly stateChange = new Emitter<State>(newState => (this.state as State) = newState)
+  readonly stateChange = new Emitter<State>(
+    newState => (this.state as State) = newState,
+    state => state == State.READY && this.server.close.activate())
 
   /** The peers who's connections are still open */
   readonly peers: Set<SimplePeer<T>> = new Set
@@ -87,8 +89,8 @@ export default class <T extends Sendable = Sendable> {
     name: Name,
     /** Number of times to attempt to make an RTC connection. */
     private readonly retries = 1,
-    /** If greater than 0, the number of milliseconds to wait before giving up on the connection. */
-    private readonly timeout = 0,
+    /** The number of milliseconds to wait before giving up on the connection. */
+    private readonly timeout = -1,
   ) {
     this.server = new Signaling(server, lobby, name)
 
@@ -120,23 +122,21 @@ export default class <T extends Sendable = Sendable> {
     try {
       // Every connection is connected successfully, ready up & close connection with server
       await Promise.all(peers.map(({ ready: { event } }) => event))
+
       for (const peer of peers)
         this.savePeer(peer)
+
       this.stateChange.activate(State.READY)
     } catch (err) {
       this.stateChange.deactivate(err)
     }
-    this.server.close.activate()
   }
 
   // Make sure to deactivate the `stateChange` if the server connection closes prematurely or with an error.
   private async bindServerClose() {
     try {
       await this.server.close.event
-      // TODO SingleEmitter resolves faster than Emitter... Fix in fancy-emitter
-      // this.assert(State.READY, 'Connection with server closed prematurely')
-      if (!this.peers.size)
-        throw Error('Connection with server closed prematurely')
+      this.assert(State.READY, 'Connection with server closed prematurely')
     } catch (err) {
       this.stateChange.deactivate(err)
     }
