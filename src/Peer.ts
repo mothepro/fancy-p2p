@@ -82,7 +82,7 @@ export default class <T extends Sendable = Sendable> implements SimplePeer<T> {
       }
 
     // Aggregate error
-    const err: Error & { reasons?: Error[] } = Error(`Unable to initializes a Direct Connection with ${name} after ${retries} attempts`)
+    const err: Error & { reasons?: Error[] } = Error(`Unable to initializes a Direct Connection with ${this.name} after ${retries} attempts`)
     err.reasons = this.reasons
     throw err
   }
