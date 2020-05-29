@@ -24,7 +24,7 @@ export default class {
   private readonly groups: Map<string, Emitter<SimpleClient>> = new Map
 
   /** Activated when our connection to signaling server is established. */
-  readonly ready = new SafeSingleEmitter(() => this.serverSend(buildIntro(this.lobby, this.name)))
+  readonly ready = new SafeSingleEmitter
 
   /** Connection with server should close */
   readonly close = new SingleEmitter(() => this.server.close())
@@ -124,8 +124,12 @@ export default class {
     return this.allClients.get(id)!
   }
 
-  constructor(address: string, private readonly lobby: LobbyID, private readonly name: Name) {
-    this.server = new WebSocket(address)
+  constructor(address: string, lobby: LobbyID, name: Name, protocol?: string | string[]) {
+    const url = new URL(address)
+    url.searchParams.set('lobby', lobby.toString(32))
+    url.searchParams.set('name', encodeURIComponent(name))
+
+    this.server = new WebSocket(url.toString(), protocol)
     this.server.binaryType = 'arraybuffer'
     this.server.addEventListener('open', this.ready.activate)
     this.server.addEventListener('close', this.close.activate)

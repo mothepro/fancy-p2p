@@ -83,16 +83,17 @@ export default class <T extends Sendable = Sendable> {
     && [...this.peers].map(peer => peer.send(data))
 
   constructor(
-    server: string,
+    name: Name,
     private readonly stuns: string[],
     lobby: LobbyID,
-    name: Name,
+    server: string,
+    signalingServerVersion: string,
     /** Number of times to attempt to make an RTC connection. */
     private readonly retries = 1,
     /** The number of milliseconds to wait before giving up on the connection. */
     private readonly timeout = -1,
   ) {
-    this.server = new Signaling(server, lobby, name)
+    this.server = new Signaling(server, lobby, name, signalingServerVersion)
 
     // Bind states across classes
     this.server.ready.once(() => this.stateChange.activate(State.LOBBY))
