@@ -1,7 +1,7 @@
 import { LitElement, html, customElement, property, internalProperty } from 'lit-element'
 import 'lit-log'
 import type { LogEntry } from 'lit-log'
-import type { SimplePeer } from '../index.js'
+import type { Peer } from '../index.js'
 
 const enum Message {
   CHECK,
@@ -33,7 +33,7 @@ export default class extends LitElement {
 
   /** List of peers we are connected to. */
   @property({ attribute: false })
-  peers!: SimplePeer[]
+  peers!: Peer[]
 
   /** The number of microseconds when requesting an RTT. */
   private initRtt?: number
@@ -61,7 +61,7 @@ export default class extends LitElement {
       this.bindMessage(peer)
   }
 
-  private async bindMessage({ message, send, name }: SimplePeer) {
+  private async bindMessage({ message, send, name }: Peer) {
     try {
       for await (const data of message) {
         if (data instanceof ArrayBuffer) {
@@ -149,7 +149,7 @@ export default class extends LitElement {
     this.data = ''
   }
 
-  private sendDirect = ({ name, send }: SimplePeer) => (event: Event) => {
+  private sendDirect = ({ name, send }: Peer) => (event: Event) => {
     try {
       event.preventDefault()
       send(this.data)

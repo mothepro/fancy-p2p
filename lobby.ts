@@ -1,14 +1,14 @@
 import { LitElement, html, customElement, property, internalProperty } from 'lit-element'
 import { Listener } from 'fancy-emitter'
 import type P2P from '../src/P2P.js'
-import type { SimpleClient } from '../index.js'
+import type { Client } from '../index.js'
 import type { LogEntry } from 'lit-log'
 
 @customElement('lit-lobby')
 export default class extends LitElement {
   /** Activated when a client joins the lobby */
   @property({ attribute: false })
-  connection!: Listener<SimpleClient>
+  connection!: Listener<Client>
 
   /** Activated when a client joins the lobby */
   @property({ attribute: false })
@@ -17,7 +17,7 @@ export default class extends LitElement {
   /** Others connected to the lobby. */
   @internalProperty()
   private clients: {
-    client: SimpleClient
+    client: Client
     /** Whether we would like to include in our group, if we propose. */
     ack: boolean
   }[] = []
@@ -42,7 +42,7 @@ export default class extends LitElement {
     }
   }
 
-  private async bindDisconnection(client: SimpleClient) {
+  private async bindDisconnection(client: Client) {
     await client.disconnect.event
     this.clients = this.clients.filter(({ client: currentClient }) => currentClient != client)
     this.log(`${client.name} has left the lobby`)
@@ -56,7 +56,7 @@ export default class extends LitElement {
     }
   }
 
-  private async bindAck(groupName: string, ack: Listener<SimpleClient>, action?: (accept: boolean) => void) {
+  private async bindAck(groupName: string, ack: Listener<Client>, action?: (accept: boolean) => void) {
     const current = this.proposals.length // the index of the proposal we may add
 
     if (action) // proposal that we can accept or reject

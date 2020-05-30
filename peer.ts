@@ -1,12 +1,12 @@
 import { LitElement, html, customElement, property, internalProperty } from 'lit-element'
 import type { Sendable } from '@mothepro/ez-rtc'
 import type { LogEntry } from 'lit-log'
-import P2P, { State, SimpleClient } from '../index.js'
-import config from './server-config.js'
+import P2P, { State, Client } from '../index.js'
+import { stuns, signaling } from './config.js'
 import './lobby.js'
 import './direct.js'
 
-type ProposeGroupEvent = CustomEvent<SimpleClient[]>
+type ProposeGroupEvent = CustomEvent<Client[]>
 type BroadcastEvent = CustomEvent<Sendable>
 
 declare global {
@@ -38,7 +38,18 @@ export default class extends LitElement {
     && this.requestUpdate()
 
   protected async firstUpdated() {
-    this.p2p = new P2P(config.signaling, config.stuns, 0, this.name, this.retries, this.timeout)
+    this.p2p = new P2P({
+      stuns,
+      name: this.name,
+      lobby: 0,
+      server: {
+        address: new URL(signaling),
+        version: '1.4.0',
+      },
+      retries: this.retries,
+      timeout: this.timeout
+    })
+
     try {
       for await (const state of this.p2p.stateChange) {
         this.log(`State changed to ${state}`)
