@@ -71,8 +71,8 @@ export default class <T extends Sendable = Sendable> {
    */
   readonly random = (isInt = false) => this.assert(State.READY)
     && isInt
-      ? this.rng!.next().value
-      : 0.5 + this.rng!.next().value / Max.INT
+    ? this.rng!.next().value
+    : 0.5 + this.rng!.next().value / Max.INT
 
   /** Propose a group with other clients connected to this lobby. */
   readonly proposeGroup: (...members: SimpleClient[]) => void = (...members) => this.assert(State.LOBBY)
@@ -83,17 +83,25 @@ export default class <T extends Sendable = Sendable> {
     && [...this.peers].map(peer => peer.send(data))
 
   constructor(
-    name: Name,
-    private readonly stuns: string[],
-    lobby: LobbyID,
-    server: string,
-    signalingServerVersion: string,
-    /** Number of times to attempt to make an RTC connection. */
-    private readonly retries = 1,
-    /** The number of milliseconds to wait before giving up on the connection. */
-    private readonly timeout = -1,
-  ) {
-    this.server = new Signaling(server, lobby, name, signalingServerVersion)
+    { name, stuns, lobby, server: { address, version }, retries = 1, timeout = -1 }: {
+      /** Name used which find other clients in lobby. */
+      name: Name
+      /** STUN servers to use to initialize P2P connections */
+      stuns: string[]
+      /** Lobby ID to use for this app */
+      lobby: LobbyID
+      server: {
+        /** The address of the signaling server */
+        address: URL
+        /** The version of `@mothepro/signaling-lobby` the signaling server is running */
+        version: string
+      }
+      /** Number of times to attempt to make an RTC connection. Defaults to 1 */
+      retries?: number
+      /** The number of milliseconds to wait before giving up on the connection. Doesn't give up by default */
+      timeout?: number
+    }) {
+    this.server = new Signaling(address, lobby, name, version)
 
     // Bind states across classes
     this.server.ready.once(() => this.stateChange.activate(State.LOBBY))
@@ -102,7 +110,7 @@ export default class <T extends Sendable = Sendable> {
     // Bind Emitters
     this.connection = this.server.connection
     this.bindClient()
-    this.bindFinalization()
+    this.bindFinalization(stuns, retries, timeout)
     this.bindServerClose()
   }
 
@@ -112,13 +120,13 @@ export default class <T extends Sendable = Sendable> {
       client.initiator.on(data => this.initiator.activate({ ...data, client }))
   }
 
-  private async bindFinalization() {
+  private async bindFinalization(stuns: string[], retries: number, timeout: number) {
     const { code, members } = await this.server.finalized.event,
       peers: Peer<T>[] = []
 
     this.rng = rng(code)
     for (const client of members)
-      peers.push(new Peer<T>(this.stuns, client, this.retries, this.timeout))
+      peers.push(new Peer<T>(stuns, client, retries, timeout))
 
     try {
       // Every connection is connected successfully, ready up & close connection with server

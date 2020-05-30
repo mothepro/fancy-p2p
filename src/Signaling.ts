@@ -124,12 +124,11 @@ export default class {
     return this.allClients.get(id)!
   }
 
-  constructor(address: string, lobby: LobbyID, name: Name, protocol?: string | string[]) {
-    const url = new URL(address)
-    url.searchParams.set('lobby', lobby.toString(32))
-    url.searchParams.set('name', encodeURIComponent(name))
+  constructor(address: URL, lobby: LobbyID, name: Name, protocol?: string | string[]) {
+    address.searchParams.set('lobby', lobby.toString(32))
+    address.searchParams.set('name', encodeURIComponent(name))
 
-    this.server = new WebSocket(url.toString(), protocol)
+    this.server = new WebSocket(address.toString(), protocol)
     this.server.binaryType = 'arraybuffer'
     this.server.addEventListener('open', this.ready.activate)
     this.server.addEventListener('close', this.close.activate)
