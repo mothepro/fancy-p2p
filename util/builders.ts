@@ -12,15 +12,6 @@ export enum MessageType {
   rollback,
 }
 
-/** Helper to create an Intro with the server. */
-export function buildIntro(lobby: LobbyID, name: Name) {
-  const nameBuffer = encoder.encode(name),
-    data = new DataView(new ArrayBuffer(Size.INT + nameBuffer.byteLength))
-  data.setInt32(0, lobby, true)
-  new Uint8Array(data.buffer, Size.INT).set(nameBuffer)
-  return data.buffer
-}
-
 /** Helper to build a group proposal or rejection. */
 export function buildProposal(accept: boolean, ...ids: ClientID[]) {
   const data = new DataView(new ArrayBuffer(Size.CHAR + Size.SHORT * ids.length))
