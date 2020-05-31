@@ -90,6 +90,7 @@ export default class <T extends Sendable = Sendable> {
       stuns: string[]
       /** Lobby ID to use for this app */
       lobby: LobbyID
+      /** Settings for the signaling server */
       server: {
         /** The address of the signaling server */
         address: URL

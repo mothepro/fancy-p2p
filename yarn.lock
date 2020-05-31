@@ -37,12 +37,12 @@
   dependencies:
     fancy-emitter "^1.4.0"
 
-"@mothepro/signaling-lobby@^0.1.2":
-  version "0.1.2"
-  resolved "https://registry.yarnpkg.com/@mothepro/signaling-lobby/-/signaling-lobby-0.1.2.tgz#7501915f380ad450cca1e6c4676b8a0d96f56ebe"
-  integrity sha512-ROVVpvOOMrJcgJpIpl12f6op9L01OUrBpAaL1Zeawn/hobO03PBY9JDZL4IzLmHpowPqplkEVjOeX5LyCCNWyA==
+"@mothepro/signaling-lobby@^0.2.1":
+  version "0.2.1"
+  resolved "https://registry.yarnpkg.com/@mothepro/signaling-lobby/-/signaling-lobby-0.2.1.tgz#b1ed85f96d43eaad88fd309988186d60f784362e"
+  integrity sha512-5729nkx9KeqRL7dXreQqZpg1IRGGvf9qr56rAKsqRo6yV9w71VIzb2HhDN+HRZb16sG6Kg0ZEDXoWAmXX0MwhA==
   dependencies:
-    fancy-emitter "^1.3.5"
+    fancy-emitter "^1.5.1"
     ws "^7.2.3"
     yargs "^15.3.1"
 
@@ -855,11 +855,6 @@ extsprintf@^1.2.0:
   version "1.4.0"
   resolved "https://registry.yarnpkg.com/extsprintf/-/extsprintf-1.4.0.tgz#e2689f8f356fad62cca65a3a91c5df5f9551692f"
   integrity sha1-4mifjzVvrWLMplo6kcXfX5VRaS8=
-
-fancy-emitter@^1.3.5:
-  version "1.3.5"
-  resolved "https://registry.yarnpkg.com/fancy-emitter/-/fancy-emitter-1.3.5.tgz#62326617c7624da94ba1ebd4398d93c2ecd5b498"
-  integrity sha512-4Z9PhO+Lj0aiuLUJeCrW4D5SGbCbRvA6oeeWSi7tHo2xwuXnK6D3+E0B5iwwTNPs3CwGSvJ1v65FcEAu4WX8HA==
 
 fancy-emitter@^1.4.0:
   version "1.4.0"

@@ -125,8 +125,8 @@ export default class {
   }
 
   constructor(address: URL, lobby: LobbyID, name: Name, protocol?: string | string[]) {
-    address.searchParams.set('lobby', lobby.toString(32))
-    address.searchParams.set('name', encodeURIComponent(name))
+    address.searchParams.set('lobby', lobby)
+    address.searchParams.set('name', name)
 
     this.server = new WebSocket(address.toString(), protocol)
     this.server.binaryType = 'arraybuffer'
