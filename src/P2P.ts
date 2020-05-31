@@ -34,9 +34,6 @@ export default class <T extends Sendable = Sendable> {
   /** The peers who's connections are still open */
   readonly peers: Set<SimplePeer<T>> = new Set
 
-  /** Activated when a direct connection to a peer is closed. */
-  readonly peerDisconnection = new SafeEmitter<SimplePeer<T>>(peer => this.peers.delete(peer))
-
   /** Generator for random integers that will be consistent across connections within [-2 ** 31, 2 ** 31). */
   private rng?: Generator<number, never, void>
 
@@ -157,6 +154,6 @@ export default class <T extends Sendable = Sendable> {
     try {
       for await (const _ of peer.message);
     } catch { } // Swallow errors
-    this.peerDisconnection.activate(peer)
+    this.peers.delete(peer)
   }
 }
