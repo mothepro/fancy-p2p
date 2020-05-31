@@ -1,6 +1,7 @@
 import { LitElement, html, customElement, property, internalProperty } from 'lit-element'
 import type { Sendable } from '@mothepro/ez-rtc'
 import type { LogEntry } from 'lit-log'
+import { name, version } from '../package.json'
 import P2P, { State, Client } from '../index.js'
 import { stuns, signaling } from './config.js'
 import './lobby.js'
@@ -41,7 +42,7 @@ export default class extends LitElement {
     this.p2p = new P2P({
       stuns,
       name: this.name,
-      lobby: 0,
+      lobby: `${name}@${version}`,
       server: {
         address: new URL(signaling),
         version: '1.4.0',
