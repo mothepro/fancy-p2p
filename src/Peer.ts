@@ -60,7 +60,7 @@ export default class <T extends Sendable = Sendable> implements SimplePeer<T> {
         this.rtc = new RTC(stuns)
 
         // Set before exchange... this is important!
-        const isReady = filterValue(this.rtc.statusChange, State.READY)
+        const isConnected = filterValue(this.rtc.statusChange, State.CONNECTED)
 
         // Exchange the SDPs
         if (await isOpener.event) {
@@ -75,7 +75,7 @@ export default class <T extends Sendable = Sendable> implements SimplePeer<T> {
 
         // Wait until ready, or timeout if possible.
         await Promise.race([
-          isReady,
+          isConnected,
           delay(timeout).then(() => Promise.reject(Error(`Connection didn't become ready in ${timeout}ms`))),
         ])
 
