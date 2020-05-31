@@ -1,5 +1,4 @@
-import type { ClientID } from '@mothepro/signaling-lobby'
-import { Size, Code } from '../util/constants.js'
+import { ClientID, Code, Size } from '@mothepro/signaling-lobby'
 import { MessageType } from './builders.js'
 import HashableSet from './HashableSet.js'
 

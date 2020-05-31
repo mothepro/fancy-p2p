@@ -1,9 +1,8 @@
 import { SafeEmitter, Emitter, SafeListener } from 'fancy-emitter'
 import type { Sendable } from '@mothepro/ez-rtc'
-import type { Name, LobbyID } from '@mothepro/signaling-lobby'
+import { Name, LobbyID, Max } from '@mothepro/signaling-lobby'
 import type { SimpleClient } from './Client.js'
 import Peer, { SimplePeer } from './Peer.js'
-import { Max } from '../util/constants.js'
 import rng from '../util/random.js'
 import Signaling from './Signaling.js'
 

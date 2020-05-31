@@ -1,8 +1,7 @@
 import { SafeSingleEmitter, SingleEmitter, SafeEmitter, Emitter } from 'fancy-emitter'
-import type { ClientID, Name, LobbyID } from '@mothepro/signaling-lobby'
+import { ClientID, Name, LobbyID, Code } from '@mothepro/signaling-lobby'
 import { parseGroupFinalize, parseGroupChange, parseClientLeave, parseClientJoin, parseSdp } from '../util/parsers.js'
 import { buildProposal, buildSdp } from '../util/builders.js'
-import { Code } from '../util/constants.js'
 import Client, { SimpleClient } from './Client.js'
 import HashableSet from '../util/HashableSet.js'
 

@@ -1,4 +1,4 @@
-import { Max } from './constants.js'
+import { Max } from '@mothepro/signaling-lobby'
 
 /**
  * Yields a random integer using Multiply with carry PRNG within [-2 ** 31, 2 ** 31).
