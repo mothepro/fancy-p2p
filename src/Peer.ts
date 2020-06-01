@@ -27,6 +27,9 @@ export default class <T extends Sendable = Sendable> implements SimplePeer<T> {
   private rtc!: RTC
 
   readonly ready = new SingleEmitter(async () => {
+    if (this.rtc.message.count)
+      console.warn(this.rtc.message.count, 'messages have been sent through', this.name, 'p2p channel before listener was bound')
+    
     // @ts-ignore This cast okay, since T is a subclass of Sendable, and the type is only guaranteed through the generic
     this.rtc.message.on(this.message.activate)
 
