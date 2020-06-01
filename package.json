@@ -49,11 +49,9 @@
     "sinon": "^9.0.2",
     "typescript": "^3.8.3"
   },
-  "optionalDependencies": {
-    "@mothepro/signaling-lobby": "^0.2.1",
-  },
   "dependencies": {
     "@mothepro/ez-rtc": "^0.0.7",
+    "@mothepro/signaling-lobby": "^0.2.1",
     "@types/ws": "^7.2.4",
     "fancy-emitter": "^1.5.1"
   }
