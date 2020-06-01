@@ -4,6 +4,13 @@ import RTC, { Sendable, State } from '@mothepro/ez-rtc'
 import Client from './Client.js'
 import delay from '../util/delay.js'
 
+class ErrorWithReasons extends Error {
+  constructor(
+    readonly reasons: Error[],
+    message?: string
+  ) { super(message) }
+}
+
 /** Represents a direct connection to a peer found in the signalling lobby. */
 export interface SimplePeer<T = Sendable> {
   /** Name of the new peer. */
@@ -19,9 +26,6 @@ export default class <T extends Sendable = Sendable> implements SimplePeer<T> {
 
   private rtc!: RTC
 
-  /** This holds the errors thrown for the RTCs that were unable to be created. */
-  private readonly reasons: Error[] = []
-
   readonly ready = new SingleEmitter(async () => {
     // @ts-ignore This cast okay, since T is a subclass of Sendable, and the type is only guaranteed through the generic
     this.rtc.message.on(this.message.activate)
@@ -34,7 +38,7 @@ export default class <T extends Sendable = Sendable> implements SimplePeer<T> {
     }
   })
 
-  message: Emitter<T> = new Emitter
+  readonly message: Emitter<T> = new Emitter
 
   readonly name: Name
 
@@ -55,6 +59,9 @@ export default class <T extends Sendable = Sendable> implements SimplePeer<T> {
   }
 
   private async makeRtc(stuns: string[], { isOpener, acceptor, creator }: Client, retries: number, timeout: number) {
+    /** This holds the errors thrown for the RTCs that were unable to be created. */
+    const reasons: Error[] = []
+
     for (let attempt = 0; attempt < Math.max(1, retries); attempt++)
       try {
         this.rtc = new RTC(stuns)
@@ -79,14 +86,11 @@ export default class <T extends Sendable = Sendable> implements SimplePeer<T> {
           delay(timeout).then(() => Promise.reject(Error(`Connection didn't become ready in ${timeout}ms`))),
         ])
 
-        return // leave function behind... we are good :)
+        return // leave function behind... we are good 😊
       } catch (err) {
-        this.reasons.push(err)
+        reasons.push(err)
       }
 
-    // Aggregate error
-    const err: Error & { reasons?: Error[] } = Error(`Unable to initializes a Direct Connection with ${this.name} after ${retries} attempts`)
-    err.reasons = this.reasons
-    throw err
+    throw new ErrorWithReasons(reasons, `Unable to initializes a Direct Connection with ${this.name} after ${retries} attempts`)
   }
 }
