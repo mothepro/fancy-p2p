@@ -5,6 +5,13 @@ import { buildProposal, buildSdp } from '../util/builders.js'
 import Client, { SimpleClient } from './Client.js'
 import HashableSet from '../util/HashableSet.js'
 
+class LeaveError extends Error {
+  constructor(
+    readonly client?: Client,
+    message?: string,
+  ) { super(message) }
+}
+
 /**
  * Handle the communication with the signaling server.
  * 
@@ -65,7 +72,7 @@ export default class {
           case Code.GROUP_FINAL:
             this.handleGroupFinalize(parseGroupFinalize(data))
             break
-          
+
           default:
             throw Error(`Unexpected data from server ${data}`)
         }
@@ -87,6 +94,10 @@ export default class {
   }
 
   private handleGroupChange({ approve, actor, members }: ReturnType<typeof parseGroupChange>) {
+    const rejectGroup = (reason: Error) =>
+      this.groups.get(members.hash)?.deactivate(reason)
+      && this.groups.delete(members.hash)
+
     if (approve) {
       // Initiate the group if it hasn't been propopsed before
       if (!this.groups.has(members.hash)) {
@@ -96,24 +107,17 @@ export default class {
         this.getClient(actor).initiator.activate({
           members: [...members].map(this.getClient),
           ack: this.groups.get(members.hash)!,
-          action: (accept) => {
+          action: accept => {
             this.serverSend(buildProposal(accept, ...members))
-            // Make DRY with switch
-            if (!accept) {
-              this.groups.get(members.hash)?.deactivate(new Error(`Rejected group with ${[...members]}.`))
-              this.groups.delete(members.hash)
-            }
+            if (!accept)
+              rejectGroup(new Error(`Rejected group with ${[...members]}.`))
           }
         })
       }
       // TODO decide if that should be in an else
       this.groups.get(members.hash)!.activate(this.getClient(actor))
-    } else {
-      const err: Error & { client?: SimpleClient } = Error(`Group with ${[...members]} was rejected.`)
-      err.client = this.allClients.get(actor)
-      this.groups.get(members.hash)?.deactivate(err)
-      this.groups.delete(members.hash)
-    }
+    } else
+      rejectGroup(new LeaveError(this.allClients.get(actor), `Group with ${[...members]} was rejected.`))
   }
 
   private handleGroupFinalize({ code, members, cmp }: ReturnType<typeof parseGroupFinalize>) {
