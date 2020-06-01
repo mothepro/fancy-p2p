@@ -50,15 +50,7 @@ export default class {
       } else
         switch (data.getUint8(0)) {
           case Code.CLIENT_JOIN:
-            const { id, name } = parseClientJoin(data),
-              client = new Client(id, name)
-            this.connection.activate(client)
-            this.allClients.set(id, client)
-
-            // Clean up on disconnect
-            client.disconnect.once(() => this.allClients.delete(id))
-            // DM the SDP for the client after creation
-            client.creator.on(sdp => this.serverSend(buildSdp(id, sdp)))
+            this.handleClientJoin(parseClientJoin(data))
             break
 
           case Code.CLIENT_LEAVE:
@@ -67,48 +59,15 @@ export default class {
 
           case Code.GROUP_REJECT:
           case Code.GROUP_REQUEST:
-            const { approve, actor, members } = parseGroupChange(data)
-
-            if (approve) {
-              // Initiate the group if it hasn't been propopsed before
-              if (!this.groups.has(members.hash)) {
-                // Used to keep track of clients when they accept or reject
-                this.groups.set(members.hash, new Emitter)
-                // Initiate on behalf of the client
-                this.getClient(actor).initiator.activate({
-                  members: [...members].map(this.getClient),
-                  ack: this.groups.get(members.hash)!,
-                  action: (accept) => {
-                    this.serverSend(buildProposal(accept, ...members))
-                    // Make DRY with switch
-                    if (!accept) {
-                      this.groups.get(members.hash)?.deactivate(new Error(`Rejected group with ${[...members]}.`))
-                      this.groups.delete(members.hash)
-                    }
-                  }
-                })
-              }
-              // TODO decide if that should be in an else
-              this.groups.get(members.hash)!.activate(this.getClient(actor))
-            } else {
-              let err: Error & { client?: SimpleClient } = Error(`Group with ${[...members]} was rejected.`)
-              if (this.allClients.has(actor))
-                err.client = this.getClient(actor)
-              this.groups.get(members.hash)?.deactivate(err)
-              this.groups.delete(members.hash)
-            }
-            return
+            this.handleGroupChange(parseGroupChange(data))
+            break
 
           case Code.GROUP_FINAL:
-            const { code, members: ids, cmp } = parseGroupFinalize(data)
-
-            for (const clientId of ids)
-              // The `cmp` is sent from the server as a way to determine
-              // What expression will evaluate the same on both sides of the equation...
-              this.getClient(clientId).isOpener.activate(cmp < clientId)
-
-            this.finalized.activate({ code, members: [...ids].map(this.getClient) })
-            return
+            this.handleGroupFinalize(parseGroupFinalize(data))
+            break
+          
+          default:
+            throw Error(`Unexpected data from server ${data}`)
         }
     } catch (err) {
       this.close.deactivate(err)
@@ -116,11 +75,69 @@ export default class {
     }
   })
 
+  private handleClientJoin({ id, name }: ReturnType<typeof parseClientJoin>) {
+    const client = new Client(id, name)
+    this.connection.activate(client)
+    this.allClients.set(id, client)
+
+    // Clean up on disconnect
+    client.disconnect.once(() => this.allClients.delete(id))
+    // DM the SDP for the client after creation
+    client.creator.on(sdp => this.serverSend(buildSdp(id, sdp)))
+  }
+
+  private handleGroupChange({ approve, actor, members }: ReturnType<typeof parseGroupChange>) {
+    if (approve) {
+      // Initiate the group if it hasn't been propopsed before
+      if (!this.groups.has(members.hash)) {
+        // Used to keep track of clients when they accept or reject
+        this.groups.set(members.hash, new Emitter)
+        // Initiate on behalf of the client
+        this.getClient(actor).initiator.activate({
+          members: [...members].map(this.getClient),
+          ack: this.groups.get(members.hash)!,
+          action: (accept) => {
+            this.serverSend(buildProposal(accept, ...members))
+            // Make DRY with switch
+            if (!accept) {
+              this.groups.get(members.hash)?.deactivate(new Error(`Rejected group with ${[...members]}.`))
+              this.groups.delete(members.hash)
+            }
+          }
+        })
+      }
+      // TODO decide if that should be in an else
+      this.groups.get(members.hash)!.activate(this.getClient(actor))
+    } else {
+      const err: Error & { client?: SimpleClient } = Error(`Group with ${[...members]} was rejected.`)
+      err.client = this.allClients.get(actor)
+      this.groups.get(members.hash)?.deactivate(err)
+      this.groups.delete(members.hash)
+    }
+  }
+
+  private handleGroupFinalize({ code, members, cmp }: ReturnType<typeof parseGroupFinalize>) {
+    for (const clientId of members)
+      // The `cmp` is sent from the server as a way to determine
+      // What expression will evaluate the same on both sides of the equation...
+      this.getClient(clientId).isOpener.activate(cmp < clientId)
+
+    this.finalized.activate({ code, members: [...members].map(this.getClient) })
+  }
+
   /** Attempts to get a client that has connected. Throws if unable to. */
   private readonly getClient = (id: ClientID) => {
     if (!this.allClients.has(id))
       throw Error(`Received data from unknown client ${id}.`)
     return this.allClients.get(id)!
+  }
+
+  /** A wrapper around socket send since that method doesn't throw, for some reason. */
+  private serverSend(data: ArrayBuffer) {
+    if (this.server.readyState != WebSocket.OPEN)
+      throw Error('WebSocket is not in an OPEN state.')
+
+    this.server.send(data)
   }
 
   constructor(address: URL, lobby: LobbyID, name: Name, protocol?: string | string[]) {
@@ -154,13 +171,5 @@ export default class {
     this.groups.set(ids.hash, new Emitter)
 
     return this.groups.get(ids.hash)!
-  }
-
-  /** A wrapper around socket send since that method doesn't throw, for some reason. */
-  private serverSend(data: ArrayBuffer) {
-    if (this.server.readyState == WebSocket.CLOSING || this.server.readyState == WebSocket.CLOSED)
-      throw Error('WebSocket is already in CLOSING or CLOSED state.')
-
-    this.server.send(data)
   }
 }
