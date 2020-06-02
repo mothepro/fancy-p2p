@@ -43,8 +43,6 @@ export default class extends LitElement {
 
   private orderedMessages: number[] = []
 
-  private readonly limit = 5e4
-
   /**
    * Number of microseconds have passed since the page has opened.
    * Could be innaccurate due to https://developer.mozilla.org/en-US/docs/Web/API/Performance/now#Reduced_time_precision

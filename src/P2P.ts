@@ -75,10 +75,10 @@ export default class <T extends Sendable = Sendable> {
     && this.initiator.activate({ members, ack: this.server.proposeGroup(...members) })
 
   /** Send data to all connected peers. */
-  readonly broadcast = (data: T) => {
+  readonly broadcast = (data: T, includeSelf = true) => {
     this.assert(State.READY)
     for (const peer of this.peers)
-      if (peer.message.isAlive)
+      if (peer.message.isAlive && (includeSelf || peer.isReal))
         peer.send(data)
   }
 
