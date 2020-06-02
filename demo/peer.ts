@@ -1,9 +1,7 @@
 import { LitElement, html, customElement, property, internalProperty } from 'lit-element'
 import type { Sendable } from '@mothepro/ez-rtc'
 import type { LogEntry } from 'lit-log'
-import pkg from '../package.json'
 import P2P, { State, Client } from '../index.js'
-import { stuns, signaling } from './config.js'
 
 import './lobby.js'
 import './direct.js'
@@ -24,6 +22,18 @@ export default class extends LitElement {
   @property({ type: String })
   private name!: string
 
+  @property({ type: Array })
+  private stuns!: string[]
+
+  @property({ type: String })
+  private server!: string
+
+  @property({ type: String })
+  private lobby!: string
+
+  @property({ type: String })
+  private version!: string
+
   @property({ type: Number })
   private retries?: number
 
@@ -40,17 +50,8 @@ export default class extends LitElement {
     && this.requestUpdate()
 
   protected async firstUpdated() {
-    this.p2p = new P2P({
-      stuns,
-      name: this.name,
-      lobby: `${pkg.name}@${pkg.version}`,
-      server: {
-        address: new URL(signaling),
-        version: '1.4.0',
-      },
-      retries: this.retries,
-      timeout: this.timeout
-    })
+    const { stuns, name, lobby, server, version, retries, timeout } = this
+    this.p2p = new P2P({ stuns, name, lobby, retries, timeout, server: { address: new URL(server), version } })
 
     try {
       for await (const state of this.p2p.stateChange) {
