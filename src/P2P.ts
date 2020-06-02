@@ -1,8 +1,8 @@
 import { SafeEmitter, Emitter, SafeListener } from 'fancy-emitter'
 import type { Sendable } from '@mothepro/ez-rtc'
-import { Name, LobbyID, Max } from '@mothepro/signaling-lobby'
-import type { SimpleClient } from './Client.js'
-import Peer, { SimplePeer } from './Peer.js'
+import { Name, LobbyID, Max, ClientID } from '@mothepro/signaling-lobby'
+import Client, { SimpleClient } from './Client.js'
+import Peer, { SimplePeer, MockPeer } from './Peer.js'
 import rng from '../util/random.js'
 import Signaling from './Signaling.js'
 
@@ -32,7 +32,7 @@ export default class <T extends Sendable = Sendable> {
     state => state == State.READY && this.server.close.activate())
 
   /** The peers who's connections are still open */
-  readonly peers: Set<SimplePeer<T>> = new Set
+  readonly peers: SimplePeer<T>[] = []
 
   /** Generator for random integers that will be consistent across connections within [-2 ** 31, 2 ** 31). */
   private rng?: Generator<number, never, void>
@@ -75,8 +75,12 @@ export default class <T extends Sendable = Sendable> {
     && this.initiator.activate({ members, ack: this.server.proposeGroup(...members) })
 
   /** Send data to all connected peers. */
-  readonly broadcast: (data: T) => void = data => this.assert(State.READY)
-    && [...this.peers].map(peer => peer.send(data))
+  readonly broadcast = (data: T) => {
+    this.assert(State.READY)
+    for (const peer of this.peers)
+      if (peer.message.isAlive)
+        peer.send(data)
+  }
 
   constructor(
     { name, stuns, lobby, server: { address, version }, retries = 1, timeout = -1 }: {
@@ -107,7 +111,7 @@ export default class <T extends Sendable = Sendable> {
     // Bind Emitters
     this.connection = this.server.connection
     this.bindClient()
-    this.bindFinalization(stuns, retries, timeout)
+    this.bindFinalization(name, stuns, retries, timeout)
     this.bindServerClose()
   }
 
@@ -117,21 +121,38 @@ export default class <T extends Sendable = Sendable> {
       client.initiator.on(data => this.initiator.activate({ ...data, client }))
   }
 
-  private async bindFinalization(stuns: string[], retries: number, timeout: number) {
-    const { code, members } = await this.server.finalized.event,
-      peers: Peer<T>[] = []
+  private async bindFinalization(myName: Name, stuns: string[], retries: number, timeout: number) {
+    const { code, members, myId } = await this.server.finalized.event,
+      memberMap: Map<ClientID, Client> = new Map,
+      ids: ClientID[] = [myId],
+      readies: Promise<void>[] = []
 
     this.rng = rng(code)
-    for (const client of members)
-      peers.push(new Peer<T>(stuns, client, retries, timeout))
+
+    for (const client of members) {
+      memberMap.set(client.id, client)
+      ids.push(client.id)
+    }
+
+    // sort the IDs then use a consistent fisher yates shuffle on them
+    ids.sort((a, b) => a - b)
+    for (let i = ids.length - 1; i > 0; i--) {
+      const j = Math.abs(this.rng.next().value) % i;
+      [ids[j], ids[i]] = [ids[i], ids[j]]
+    }
+
+    // If the ID is in the map add a real peer in it's place, otherwise just a mock will do
+    for (const id of ids)
+      if (memberMap.has(id)) {
+        const peer = new Peer<T>(stuns, memberMap.get(id)!, retries, timeout)
+        readies.push(peer.ready.event)
+        this.peers.push(peer)
+      } else
+        this.peers.push(new MockPeer(myName))
 
     try {
       // Every connection is connected successfully, ready up & close connection with server
-      await Promise.all(peers.map(({ ready: { event } }) => event))
-
-      for (const peer of peers)
-        this.savePeer(peer)
-
+      await Promise.all(readies)
       this.stateChange.activate(State.READY)
     } catch (err) {
       this.stateChange.deactivate(err)
@@ -146,14 +167,5 @@ export default class <T extends Sendable = Sendable> {
     } catch (err) {
       this.stateChange.deactivate(err)
     }
-  }
-
-  /** Save a peer to the instance, removes when connection ends. */
-  private async savePeer(peer: SimplePeer<T>) {
-    this.peers.add(peer)
-    try {
-      for await (const _ of peer.message);
-    } catch { } // Swallow errors
-    this.peers.delete(peer)
   }
 }

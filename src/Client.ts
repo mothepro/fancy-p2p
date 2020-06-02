@@ -43,5 +43,5 @@ export default class implements SimpleClient {
   /** Activates when an SDP is received for this corresponding client. */
   readonly acceptor: SafeEmitter<RTCSessionDescriptionInit> = new SafeEmitter
 
-  constructor(private readonly id: ClientID, readonly name: Name) { }
+  constructor(readonly id: ClientID, readonly name: Name) { }
 }

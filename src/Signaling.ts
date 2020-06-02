@@ -37,17 +37,14 @@ export default class {
 
   readonly finalized: SafeSingleEmitter<{
     code: number
+    myId: ClientID
     members: Client[]
   }> = new SafeSingleEmitter
 
   /** Activated when a new client joins the lobby. */
   readonly connection: SafeEmitter<Client> = new SafeEmitter
 
-  /**
-   * Activates when receiving some data from the signaling server.
-   * Deactivates on connection error.
-   * Cancels when connection ends gracefully.
-   */
+  /** Activates when receiving some data from the signaling server. */
   private readonly message = new SafeEmitter<DataView>(data => {
     try {
       if (this.finalized.triggered) {
@@ -82,15 +79,17 @@ export default class {
     }
   })
 
-  private handleClientJoin({ id, name }: ReturnType<typeof parseClientJoin>) {
+  private async handleClientJoin({ id, name }: ReturnType<typeof parseClientJoin>) {
     const client = new Client(id, name)
     this.connection.activate(client)
     this.allClients.set(id, client)
 
-    // Clean up on disconnect
-    client.disconnect.once(() => this.allClients.delete(id))
     // DM the SDP for the client after creation
     client.creator.on(sdp => this.serverSend(buildSdp(id, sdp)))
+
+    // Clean up on disconnect
+    await client.disconnect.event
+    this.allClients.delete(id)
   }
 
   private handleGroupChange({ approve, actor, members }: ReturnType<typeof parseGroupChange>) {
@@ -126,7 +125,7 @@ export default class {
       // What expression will evaluate the same on both sides of the equation...
       this.getClient(clientId).isOpener.activate(cmp < clientId)
 
-    this.finalized.activate({ code, members: [...members].map(this.getClient) })
+    this.finalized.activate({ code, myId: cmp, members: [...members].map(this.getClient) })
   }
 
   /** Attempts to get a client that has connected. Throws if unable to. */
@@ -140,7 +139,6 @@ export default class {
   private serverSend(data: ArrayBuffer) {
     if (this.server.readyState != WebSocket.OPEN)
       throw Error('WebSocket is not in an OPEN state.')
-
     this.server.send(data)
   }
 

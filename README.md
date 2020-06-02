@@ -13,5 +13,4 @@ TODO...
 ## Roadmap
 
 + Test RTC possibility before starting server connection
-+ Support consistent ordering (Turn based games etc...)
 + Support trickle ICE

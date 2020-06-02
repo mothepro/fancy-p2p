@@ -21,10 +21,18 @@ export interface SimplePeer<T = Sendable> {
   readonly message: Listener<T>
 }
 
+/** Simple class that can be used as a local feedback peer. */
+export class MockPeer<T extends Sendable = Sendable> implements SimplePeer<T> {
+  readonly message = new Emitter<T>()
+  readonly send = this.message.activate
+  constructor(readonly name: Name) {}
+}
+
 // TODO support making connections until one is established.
 export default class <T extends Sendable = Sendable> implements SimplePeer<T> {
-
   private rtc!: RTC
+  readonly name: Name
+  readonly message: Emitter<T> = new Emitter
 
   readonly ready = new SingleEmitter(async () => {
     if (this.rtc.message.count)
@@ -41,10 +49,6 @@ export default class <T extends Sendable = Sendable> implements SimplePeer<T> {
     }
   })
 
-  readonly message: Emitter<T> = new Emitter
-
-  readonly name: Name
-
   readonly send = (data: T) => {
     if (!this.message.isAlive)
       throw Error('Unable to send data when connection is not open')
@@ -57,7 +61,7 @@ export default class <T extends Sendable = Sendable> implements SimplePeer<T> {
   }
 
   private async makeRtc(stuns: string[], { isOpener, acceptor, creator }: Client, retries: number, timeout: number) {
-    /** This holds the errors thrown for the RTCs that were unable to be created. */
+    // This holds the errors thrown for the RTCs that were unable to be created.
     const reasons: Error[] = []
 
     for (let attempt = 0; attempt < Math.max(1, retries); attempt++)
