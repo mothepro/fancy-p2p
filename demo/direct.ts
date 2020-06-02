@@ -120,7 +120,7 @@ export default class extends LitElement {
       ${[...this.peers].map(peer => html`
         <li @click=${this.sendDirect(peer)}>
           ${peer.name}
-          ${peer.isReal ? '' : '🌟'}
+          ${peer.isYou ? '🌟' : ''}
         </li>`)}
       </ul>
       <form @submit=${this.sendData}>

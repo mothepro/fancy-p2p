@@ -78,7 +78,7 @@ export default class <T extends Sendable = Sendable> {
   readonly broadcast = (data: T, includeSelf = true) => {
     this.assert(State.READY)
     for (const peer of this.peers)
-      if (peer.message.isAlive && (includeSelf || peer.isReal))
+      if (peer.message.isAlive && (includeSelf || !peer.isYou))
         peer.send(data)
   }
 

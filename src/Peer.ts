@@ -20,16 +20,16 @@ export interface SimplePeer<T = Sendable> {
   /** Activates when a message is received for this peer. Cancels once the connection is closed. */
   readonly message: Listener<T>
   /**
-   * Whether this peer represents a connection through the wire.
+   * Whether this peer represents a "connection" to you.
    * 
-   * Always true, unless the "peer" is the user itself, meaning no data will be sent over the network.
+   * When false this is another peer and data is sent through the wire.
    */
-  readonly isReal: boolean
+  readonly isYou: boolean
 }
 
 /** Simple class that can be used as a local feedback peer. */
 export class MockPeer<T extends Sendable = Sendable> implements SimplePeer<T> {
-  readonly isReal = false
+  readonly isYou = true
   readonly message: Emitter<T> = new Emitter
   readonly send = this.message.activate
   constructor(readonly name: Name) { }
@@ -37,7 +37,7 @@ export class MockPeer<T extends Sendable = Sendable> implements SimplePeer<T> {
 
 // TODO support making connections until one is established.
 export default class <T extends Sendable = Sendable> implements SimplePeer<T> {
-  readonly isReal = true
+  readonly isYou = false
   private rtc!: RTC
   readonly name: Name
   readonly message: Emitter<T> = new Emitter
