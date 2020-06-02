@@ -65,9 +65,6 @@ export default class extends LitElement {
       for await (const data of message) {
         if (data instanceof ArrayBuffer) {
           const view = new DataView(data)
-          // if (data.byteLength != 1)
-          //   throw Error(`${name} sent an ArrayBuffer(${data.byteLength}), only expecting buffers of size 1`)
-
           switch (view.getInt8(0)) {
             case Message.CHECK:
               this.orderedMessages.push(view.getUint32(1, true))
@@ -80,7 +77,7 @@ export default class extends LitElement {
                 this.orderedMessages.length = 0
               }
               break
-            
+
             case Message.GENERATE_RANDOM:
               this.chat = `${name} shared the random integer ${this.nextRandom} for us`
               this.dispatchEvent(new CustomEvent('requestRNG', { bubbles: true }))
@@ -103,7 +100,9 @@ export default class extends LitElement {
             default:
               throw Error(`${name} sent unexpected ${view.byteLength} bytes ${view}`)
           }
-        } else
+        }
+
+        if (typeof data == 'string')
           this.chat = `${name} says "${data}"`
       }
     } catch (err) {
@@ -119,7 +118,10 @@ export default class extends LitElement {
       Peers
       <ul>
       ${[...this.peers].map(peer => html`
-        <li @click=${this.sendDirect(peer)}>${peer.name}</li>`)}
+        <li @click=${this.sendDirect(peer)}>
+          ${peer.name}
+          ${peer.isReal ? '' : '🌟'}
+        </li>`)}
       </ul>
       <form @submit=${this.sendData}>
         <input
@@ -144,7 +146,6 @@ export default class extends LitElement {
   private sendData = (event: Event) => {
     event.preventDefault()
     this.dispatchEvent(new CustomEvent('broadcast', { detail: this.data, bubbles: true }))
-    this.log(`Broadcasted "${this.data}"`)
     this.data = ''
   }
 
