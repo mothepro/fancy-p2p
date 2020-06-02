@@ -2,7 +2,7 @@
   "name": "@mothepro/fancy-p2p",
   "description": "A quick and efficient way to form p2p groups in the browser",
   "author": "Maurice Prosper",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "license": "Apache-2.0",
   "main": "dist/npm/index.js",
   "sideEffects": false,
