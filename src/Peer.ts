@@ -29,7 +29,7 @@ export default class <T extends Sendable = Sendable> implements SimplePeer<T> {
   readonly ready = new SingleEmitter(async () => {
     if (this.rtc.message.count)
       console.warn(this.rtc.message.count, 'messages have been sent through', this.name, 'p2p channel before listener was bound')
-    
+
     // @ts-ignore This cast okay, since T is a subclass of Sendable, and the type is only guaranteed through the generic
     this.rtc.message.on(this.message.activate)
 
@@ -54,11 +54,6 @@ export default class <T extends Sendable = Sendable> implements SimplePeer<T> {
   constructor(stuns: string[], client: Client, retries = 1, timeout = -1) {
     this.name = client.name
     this.makeRtc(stuns, client, retries, timeout)
-      .then(this.ready.activate)
-      .catch(err => {
-        this.ready.deactivate(err)
-        this.message.cancel() // Cancel early since no events will ever occur.
-      })
   }
 
   private async makeRtc(stuns: string[], { isOpener, acceptor, creator }: Client, retries: number, timeout: number) {
@@ -89,11 +84,14 @@ export default class <T extends Sendable = Sendable> implements SimplePeer<T> {
           delay(timeout).then(() => Promise.reject(Error(`Connection didn't become ready in ${timeout}ms`))),
         ])
 
-        return // leave function behind... we are good 😊
+        // leave function behind... we are good 😊
+        this.ready.activate()
+        return
       } catch (err) {
         reasons.push(err)
       }
 
-    throw new ErrorWithReasons(reasons, `Unable to initializes a Direct Connection with ${this.name} after ${retries} attempts`)
+    this.message.cancel() // Cancel early since no events will ever occur.
+    this.ready.deactivate(new ErrorWithReasons(reasons, `Unable to initializes a Direct Connection with ${this.name} after ${retries} attempts`))
   }
 }
