@@ -98,7 +98,7 @@ export default class extends LitElement {
         case State.READY:
           return html`
             <lit-direct
-              .peers=${[...this.p2p.peers]}
+              .peers=${this.p2p.peers}
               next-random=${this.random}
               @broadcast=${this.broadcast}
               @requestRNG=${() => this.random = this.p2p!.random(true)}
