@@ -50,7 +50,7 @@
     "typescript": "^3.8.3"
   },
   "dependencies": {
-    "@mothepro/ez-rtc": "^0.0.7",
+    "@mothepro/ez-rtc": "^0.1.0",
     "@mothepro/signaling-lobby": "^0.2.1",
     "@types/ws": "^7.2.4",
     "fancy-emitter": "^1.5.1"

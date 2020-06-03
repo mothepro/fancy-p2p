@@ -30,12 +30,12 @@
   dependencies:
     regenerator-runtime "^0.13.4"
 
-"@mothepro/ez-rtc@^0.0.7":
-  version "0.0.7"
-  resolved "https://registry.yarnpkg.com/@mothepro/ez-rtc/-/ez-rtc-0.0.7.tgz#1da2ae7b2078a3fd7b2d863b76e9c3dc63c6f48b"
-  integrity sha512-PfCH9aSPb50EzSAo3hTI5z9pTTPAQlBDbvypxa05TlpKMZKyN34XLjA4guZQxz9UHzLRD3GVTmRepBoDVzzLNg==
+"@mothepro/ez-rtc@^0.1.0":
+  version "0.1.0"
+  resolved "https://registry.yarnpkg.com/@mothepro/ez-rtc/-/ez-rtc-0.1.0.tgz#eea406ab61965ab62322a0f90803f3b9e70f9b9f"
+  integrity sha512-EDPbaA/dvJQEoRphEhzR5X9sn0qNImVLATFtBAIYac5uRy2bCQm/ArbAvz0xYL6niXD7WqDdWep3hpXp1zGVAQ==
   dependencies:
-    fancy-emitter "^1.4.0"
+    fancy-emitter "^1.5.1"
 
 "@mothepro/signaling-lobby@^0.2.1":
   version "0.2.1"
@@ -855,11 +855,6 @@ extsprintf@^1.2.0:
   version "1.4.0"
   resolved "https://registry.yarnpkg.com/extsprintf/-/extsprintf-1.4.0.tgz#e2689f8f356fad62cca65a3a91c5df5f9551692f"
   integrity sha1-4mifjzVvrWLMplo6kcXfX5VRaS8=
-
-fancy-emitter@^1.4.0:
-  version "1.4.0"
-  resolved "https://registry.yarnpkg.com/fancy-emitter/-/fancy-emitter-1.4.0.tgz#9f6a4d396c3686581e1c424e1259ed6dcd6064c9"
-  integrity sha512-VnwsrPZgU0FwhKGEW1eJFUJMsH0Nq19FraDeXrSUn5yOlgrW7mSxGUTBhRbctcbfanYlpL57SQs5+sR+Azeubw==
 
 fancy-emitter@^1.5.1:
   version "1.5.1"
