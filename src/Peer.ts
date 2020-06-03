@@ -85,15 +85,13 @@ export default class <T extends Sendable = Sendable> implements SimplePeer<T> {
         const isConnected = filterValue(this.rtc.statusChange, State.CONNECTED)
 
         // Exchange the SDPs
-        if (await isOpener.event) {
-          // Openers should create offer -> accept answer
+        if (await isOpener.event) // Openers should create offer -> accept answer
           creator.activate(await this.rtc.createOffer())
-          this.rtc.acceptSDP(await acceptor.next)
-        } else {
-          // Closers should accept offter -> create answer
-          this.rtc.acceptSDP(await acceptor.next)
+        
+        this.rtc.acceptSDP(await acceptor.next)
+
+        if (!await isOpener.event) // Closers should accept offter -> create answer
           creator.activate(await this.rtc.createAnswer())
-        }
 
         // Wait until ready, or timeout if possible.
         await Promise.race([
