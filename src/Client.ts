@@ -1,4 +1,4 @@
-import { SafeEmitter, SafeListener, Emitter, SafeSingleEmitter } from 'fancy-emitter'
+import { SafeEmitter, SafeListener, Emitter, SafeSingleEmitter, Listener } from 'fancy-emitter'
 import type { ClientID, Name } from '@mothepro/signaling-lobby'
 
 /** Represents another client in the same lobby and signaling server as we are. */
@@ -12,11 +12,11 @@ export interface SimpleClient {
     /** Function to accept or reject the group, not present if you created the group */
     action?(accept: boolean): void
     /** Activated with the Client who just accepted the group proposal. Deactivates when someone rejects. */
-    ack: Emitter<SimpleClient>
+    ack: Listener<SimpleClient>
   }>
   /**
    * Whether this client represents you in the lobby.
-   * When false this is another peer and data is sent through the wire.
+   * When false this is another client and proposals are initiated by them.
    */
   readonly isYou: boolean
 }
