@@ -1,4 +1,4 @@
-import { SafeEmitter, Emitter, SafeListener } from 'fancy-emitter'
+import { Emitter, SafeListener } from 'fancy-emitter'
 import type { Sendable } from '@mothepro/ez-rtc'
 import { Name, LobbyID, Max, ClientID } from '@mothepro/signaling-lobby'
 import Client, { SimpleClient } from './Client.js'
@@ -24,21 +24,23 @@ export const enum State {
 export default class <T extends Sendable = Sendable> {
 
   readonly state: State = State.OFFLINE
-  private readonly server: Signaling
 
   /** Activated when the state changes, Cancels when finalized, Deactivates when error is throw. */
   readonly stateChange = new Emitter<State>(
     newState => (this.state as State) = newState,
     state => state == State.READY && this.server.close.activate())
 
+  /** Activated when a client joins the lobby. */
+  readonly connection: SafeListener<SimpleClient>
+
   /** The peers who's connections are still open */
   readonly peers: SimplePeer<T>[] = []
 
   /** Generator for random integers that will be consistent across connections within [-2 ** 31, 2 ** 31). */
+  // TODO determine if this should be accessible from the outside
   private rng?: Generator<number, never, void>
 
-  /** Activated when a client joins the lobby. */
-  readonly connection: SafeListener<SimpleClient>
+  private readonly server: Signaling
 
   // TODO allow READY state even tho the state doesn't change until the next tick
   protected assert(valid: State, message = `Expected state to be ${valid} but was ${this.state}`) {
@@ -51,18 +53,26 @@ export default class <T extends Sendable = Sendable> {
    * Generates a random number in [0,1). Same as Math.random()
    * If `isInt` is true, than a integer in range [-2 ** 31, 2 ** 31) is generated.
    * 
-   * Throws if group has yet to be finalized.
+   * `state` must be `State.READY`.
    */
   readonly random = (isInt = false) => this.assert(State.READY) &&
     isInt
     ? this.rng!.next().value
     : 0.5 + this.rng!.next().value / Max.INT
 
-  /** Propose a group with other clients connected to this lobby. */
+  /**
+   * Propose a group with other clients connected to this lobby.
+   * 
+   * `state` must be `State.LOBBY`.
+   */
   readonly proposeGroup: (...members: SimpleClient[]) => void = (...members) => this.assert(State.LOBBY) &&
     this.server.proposeGroup(...members)
 
-  /** Send data to all connected peers. */
+  /**
+   * Send data to all connected peers. 
+   * 
+   * `state` must be `State.READY`.
+   */
   readonly broadcast = (data: T, includeSelf = true) => {
     this.assert(State.READY)
     for (const peer of this.peers)
@@ -140,7 +150,6 @@ export default class <T extends Sendable = Sendable> {
     }
   }
 
-  // Make sure to deactivate the `stateChange` if the server connection closes prematurely or with an error.
   private async bindServerClose() {
     try {
       await this.server.close.event
