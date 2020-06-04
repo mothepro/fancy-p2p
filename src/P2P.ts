@@ -61,7 +61,7 @@ export default class <T extends Sendable = Sendable> {
   /** Propose a group with other clients connected to this lobby. */
   readonly proposeGroup: (...members: SimpleClient[]) => void = (...members) => this.assert(State.LOBBY) &&
     this.server.proposeGroup(...members)
-  
+
   /** Send data to all connected peers. */
   readonly broadcast = (data: T, includeSelf = true) => {
     this.assert(State.READY)
@@ -71,9 +71,9 @@ export default class <T extends Sendable = Sendable> {
   }
 
   constructor(
-    { name, stuns, lobby, server: { address, version }, retries = 1, timeout = -1 }: {
-      /** Name used which find other clients in lobby. */
-      name: Name
+    /** Name used which find other clients in lobby. */
+    name: Name,
+    { stuns, lobby, server: { address, version }, retries = 1, timeout = -1 }: {
       /** STUN servers to use to initialize P2P connections */
       stuns: string[]
       /** Lobby ID to use for this app */
