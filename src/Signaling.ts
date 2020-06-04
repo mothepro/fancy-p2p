@@ -144,7 +144,9 @@ export default class {
     this.server.send(data)
   }
 
-  constructor(address: URL, lobby: LobbyID, name: Name, protocol?: string | string[]) {
+  constructor(address: URL | string, lobby: LobbyID, name: Name, protocol?: string | string[]) {
+    if (typeof address == 'string')
+      address = new URL(address)
     address.searchParams.set('lobby', lobby)
     address.searchParams.set('name', name)
 

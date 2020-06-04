@@ -81,7 +81,7 @@ export default class <T extends Sendable = Sendable> {
       /** Settings for the signaling server */
       server: {
         /** The address of the signaling server */
-        address: URL
+        address: URL | string
         /** The version of `@mothepro/signaling-lobby` the signaling server is running */
         version: string
       }
