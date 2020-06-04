@@ -6,7 +6,7 @@ export interface SimpleClient {
   /** Name of this client. */
   readonly name: Name
   /** Activated when a initiating a new group. */
-  readonly initiator: SafeListener<{
+  readonly propose: SafeListener<{
     /** The other members in this group, including me. */
     members: SimpleClient[]
     /** Function to accept or reject the group, not present if you created the group */
@@ -23,7 +23,7 @@ export interface SimpleClient {
 
 export class MockClient implements SimpleClient {
   readonly isYou = true
-  readonly initiator: Emitter<{
+  readonly propose: Emitter<{
     members: SimpleClient[]
     ack: Emitter<SimpleClient>
   }> = new Emitter
@@ -34,7 +34,7 @@ export class MockClient implements SimpleClient {
 export default class implements SimpleClient {
   readonly isYou = false
 
-  readonly initiator: Emitter<{
+  readonly propose: Emitter<{
     members: SimpleClient[]
     action(accept: boolean): void
     ack: Emitter<SimpleClient>

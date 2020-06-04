@@ -60,7 +60,7 @@ export default class {
             break
 
           case Code.CLIENT_LEAVE:
-            this.getClient(parseClientLeave(data)).initiator.cancel()
+            this.getClient(parseClientLeave(data)).propose.cancel()
             break
 
           case Code.GROUP_REJECT:
@@ -90,7 +90,7 @@ export default class {
     client.creator.on(sdp => this.serverSend(buildSdp(id, sdp)))
 
     // Clean up on disconnect
-    for await (const _ of client.initiator);
+    for await (const _ of client.propose);
     this.allClients.delete(id)
   }
 
@@ -105,7 +105,7 @@ export default class {
         // Used to keep track of clients when they accept or reject
         this.groups.set(members.hash, new Emitter)
         // Initiate on behalf of the client
-        this.getClient(actor).initiator.activate({
+        this.getClient(actor).propose.activate({
           members: [...members].map(this.getClient),
           ack: this.groups.get(members.hash)!,
           action: accept => {
@@ -181,7 +181,7 @@ export default class {
     const ack: Emitter<SimpleClient> = new Emitter
     this.serverSend(buildProposal(true, ...ids))
     this.groups.set(ids.hash, ack)
-    this.self!.initiator.activate({ members, ack })
+    this.self!.propose.activate({ members, ack })
 
     return this.groups.get(ids.hash)!
   }

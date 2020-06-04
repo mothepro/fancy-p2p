@@ -37,7 +37,7 @@ export default class extends LitElement {
   }
 
   private async bindProposals(client: Client) {
-    for await (const { members, ack, action } of client.initiator) {
+    for await (const { members, ack, action } of client.propose) {
       const names = members.map(({ name }) => name).join(', ')
       this.log(`${client.isYou ? 'You' : client.name} proposed a group for ${names} & you`)
       this.bindAck(names, ack, action)
