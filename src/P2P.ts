@@ -31,7 +31,7 @@ export default class <T extends Sendable = Sendable> {
     state => state == State.READY && this.server.close.activate())
 
   /** Activated when a client joins the lobby. */
-  readonly connection: SafeListener<SimpleClient>
+  readonly lobbyConnection: SafeListener<SimpleClient>
 
   /** The peers who's connections are still open */
   readonly peers: SimplePeer<T>[] = []
@@ -107,7 +107,7 @@ export default class <T extends Sendable = Sendable> {
     this.server.finalized.once(() => this.stateChange.activate(State.LOADING))
 
     // Bind Emitters
-    this.connection = this.server.connection
+    this.lobbyConnection = this.server.connection
     this.bindFinalization(name, stuns, retries, timeout)
     this.bindServerClose()
   }

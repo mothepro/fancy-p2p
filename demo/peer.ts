@@ -87,7 +87,7 @@ export default class extends LitElement {
         case State.LOBBY:
           return html`
             <lit-lobby
-              .connection=${this.p2p.connection}
+              .connection=${this.p2p.lobbyConnection}
               @proposeGroup=${this.proposeGroup}
             ></lit-lobby>`
 
