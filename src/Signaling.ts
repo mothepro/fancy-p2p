@@ -2,7 +2,7 @@ import { SafeSingleEmitter, SingleEmitter, SafeEmitter, Emitter } from 'fancy-em
 import { ClientID, Name, LobbyID, Code } from '@mothepro/signaling-lobby'
 import { parseGroupFinalize, parseGroupChange, parseClientLeave, parseClientJoin, parseSdp } from '../util/parsers.js'
 import { buildProposal, buildSdp } from '../util/builders.js'
-import Client, { SimpleClient } from './Client.js'
+import Client, { SimpleClient, MockClient } from './Client.js'
 import HashableSet from '../util/HashableSet.js'
 
 class LeaveError extends Error {
@@ -20,6 +20,8 @@ class LeaveError extends Error {
  * Listening on the `groupFinal` emitter will tell caller which offers/answers to create/accept
  */
 export default class {
+
+  private self?: MockClient
 
   /** Socket to signaling server. */
   private readonly server!: WebSocket
@@ -42,7 +44,7 @@ export default class {
   }> = new SafeSingleEmitter
 
   /** Activated when a new client joins the lobby. */
-  readonly connection: SafeEmitter<Client> = new SafeEmitter
+  readonly connection: SafeEmitter<SimpleClient> = new SafeEmitter
 
   /** Activates when receiving some data from the signaling server. */
   private readonly message = new SafeEmitter<DataView>(data => {
@@ -58,7 +60,7 @@ export default class {
             break
 
           case Code.CLIENT_LEAVE:
-            this.getClient(parseClientLeave(data)).disconnect.activate()
+            this.getClient(parseClientLeave(data)).initiator.cancel()
             break
 
           case Code.GROUP_REJECT:
@@ -88,7 +90,7 @@ export default class {
     client.creator.on(sdp => this.serverSend(buildSdp(id, sdp)))
 
     // Clean up on disconnect
-    await client.disconnect.event
+    for await (const _ of client.initiator);
     this.allClients.delete(id)
   }
 
@@ -152,6 +154,9 @@ export default class {
     this.server.addEventListener('close', this.close.activate)
     this.server.addEventListener('error', () => this.close.deactivate(Error('Connection to Server closed unexpectedly.')))
     this.server.addEventListener('message', async ({ data }) => this.message.activate(new DataView(data)))
+
+    // Activate connection with self once ready
+    this.ready.once(() => setTimeout(this.connection.activate, 0, this.self = new MockClient(name)))
   }
 
   /** Proposes a group to the server and returns the emitter that will be activated when clients accept it. */
@@ -159,9 +164,13 @@ export default class {
     const ids: HashableSet<ClientID> = new HashableSet
 
     // TODO improve this??
+    // for some reason this allows members to include self.
     for (const [id, client] of this.allClients)
       if (members.includes(client))
         ids.add(id)
+
+    if (!this.ready.triggered)
+      throw Error('Can not propose a group before connecting.')
 
     if (this.groups.has(ids.hash))
       throw Error('Can not propose a group that is already formed.')
@@ -169,8 +178,10 @@ export default class {
     if (ids.size < 1)
       throw Error('Can not propose a group without members.')
 
+    const ack: Emitter<SimpleClient> = new Emitter
     this.serverSend(buildProposal(true, ...ids))
-    this.groups.set(ids.hash, new Emitter)
+    this.groups.set(ids.hash, ack)
+    this.self!.initiator.activate({ members, ack })
 
     return this.groups.get(ids.hash)!
   }

@@ -1,18 +1,13 @@
 import { LitElement, html, customElement, property, internalProperty } from 'lit-element'
-import { Listener } from 'fancy-emitter'
-import type P2P from '../src/P2P.js'
-import type { Client } from '../index.js'
+import { SafeListener, Listener } from 'fancy-emitter'
 import type { LogEntry } from 'lit-log'
+import type { Client } from '../index.js'
 
 @customElement('lit-lobby')
 export default class extends LitElement {
   /** Activated when a client joins the lobby */
   @property({ attribute: false })
-  connection!: Listener<Client>
-
-  /** Activated when a client joins the lobby */
-  @property({ attribute: false })
-  groupProposed!: P2P['initiator']
+  connection!: SafeListener<Client>
 
   /** Others connected to the lobby. */
   @internalProperty()
@@ -34,26 +29,22 @@ export default class extends LitElement {
     && this.requestUpdate()
 
   protected async firstUpdated() {
-    this.bindProposals()
     for await (const client of this.connection) {
       this.clients = [...this.clients, { client, ack: false }]
       this.log(`${client.name} has joined the lobby`)
-      this.bindDisconnection(client)
+      this.bindProposals(client)
     }
   }
 
-  private async bindDisconnection(client: Client) {
-    await client.disconnect.event
-    this.clients = this.clients.filter(({ client: currentClient }) => currentClient != client)
-    this.log(`${client.name} has left the lobby`)
-  }
-
-  private async bindProposals() {
-    for await (const { members, ack, action, client } of this.groupProposed) {
+  private async bindProposals(client: Client) {
+    for await (const { members, ack, action } of client.initiator) {
       const names = members.map(({ name }) => name).join(', ')
-      this.log(`${client ? client.name : 'You'} proposed a group for ${names} & you`)
+      this.log(`${client.isYou ? 'You' : client.name} proposed a group for ${names} & you`)
       this.bindAck(names, ack, action)
     }
+    
+    this.clients = this.clients.filter(({ client: currentClient }) => currentClient != client)
+    this.log(`${client.name} has left the lobby`)
   }
 
   private async bindAck(groupName: string, ack: Listener<Client>, action?: (accept: boolean) => void) {
@@ -90,12 +81,13 @@ export default class extends LitElement {
         })) && event.preventDefault()}}
     >
       <ul id="others">
-        ${[...this.clients].map(({ client: { name }, ack }, index) => html`
+        ${[...this.clients].map(({ client: { name, isYou }, ack }, index) => html`
         <li>
           <label>
             <input
               type="checkbox"
               ?checked=${ack}
+              ?disabled=${isYou}
               @click=${() => this.clients = this.clients.map(({ client, ack: currentAck }, i) => ({
                 client,
                 ack: index == i ? !currentAck : currentAck,

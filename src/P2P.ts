@@ -40,18 +40,6 @@ export default class <T extends Sendable = Sendable> {
   /** Activated when a client joins the lobby. */
   readonly connection: SafeListener<SimpleClient>
 
-  /** Activated when anyone initiates a new group. */
-  readonly initiator: SafeEmitter<{
-    /** The client who proposed this group. not present if you created the group */
-    client?: SimpleClient
-    /** The members in this group. */
-    members: SimpleClient[]
-    /** Function to accept or reject the group, not present if you created the group */
-    action?(accept: boolean): void
-    /** Activated with the Client who just accepted the group proposal. Deactivates when someone rejects. */
-    ack: Emitter<SimpleClient>
-  }> = new SafeEmitter
-
   // TODO allow READY state even tho the state doesn't change until the next tick
   protected assert(valid: State, message = `Expected state to be ${valid} but was ${this.state}`) {
     if (this.state != valid)
@@ -65,15 +53,15 @@ export default class <T extends Sendable = Sendable> {
    * 
    * Throws if group has yet to be finalized.
    */
-  readonly random = (isInt = false) => this.assert(State.READY)
-    && isInt
+  readonly random = (isInt = false) => this.assert(State.READY) &&
+    isInt
     ? this.rng!.next().value
     : 0.5 + this.rng!.next().value / Max.INT
 
   /** Propose a group with other clients connected to this lobby. */
-  readonly proposeGroup: (...members: SimpleClient[]) => void = (...members) => this.assert(State.LOBBY)
-    && this.initiator.activate({ members, ack: this.server.proposeGroup(...members) })
-
+  readonly proposeGroup: (...members: SimpleClient[]) => void = (...members) => this.assert(State.LOBBY) &&
+    this.server.proposeGroup(...members)
+  
   /** Send data to all connected peers. */
   readonly broadcast = (data: T, includeSelf = true) => {
     this.assert(State.READY)
@@ -110,15 +98,8 @@ export default class <T extends Sendable = Sendable> {
 
     // Bind Emitters
     this.connection = this.server.connection
-    this.bindClient()
     this.bindFinalization(name, stuns, retries, timeout)
     this.bindServerClose()
-  }
-
-  private async bindClient() {
-    for await (const client of this.connection)
-      // Bind the client `initiator`s to this `initiator`
-      client.initiator.on(data => this.initiator.activate({ ...data, client }))
   }
 
   private async bindFinalization(myName: Name, stuns: string[], retries: number, timeout: number) {
