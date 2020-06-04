@@ -164,7 +164,6 @@ export default class extends LitElement {
     event.preventDefault()
     this.dispatchEvent(new CustomEvent('broadcast', { detail: new Uint8Array([Message.GENERATE_RANDOM]), bubbles: true }))
     this.chat = `Shared random integer for us is ${this.nextRandom}`
-    this.dispatchEvent(new CustomEvent('requestRNG', { bubbles: true }))
   }
 
   private sendRtt = (event: Event) => {

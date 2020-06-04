@@ -21,7 +21,6 @@ export interface SimplePeer<T = Sendable> {
   readonly message: Listener<Exclude<T, ArrayBufferView>>
   /**
    * Whether this peer represents a "connection" to you.
-   * 
    * When false this is another peer and data is sent through the wire.
    */
   readonly isYou: boolean
@@ -42,10 +41,11 @@ export class MockPeer<T extends Sendable = Sendable> implements SimplePeer<T> {
 
 // TODO support making connections until one is established.
 export default class <T extends Sendable = Sendable> implements SimplePeer<T> {
-  readonly isYou = false
   private rtc!: RTC
+  readonly isYou = false
   readonly name: Name
   readonly message: Emitter<Exclude<T, ArrayBufferView>> = new Emitter
+  readonly send = this.rtc.send
 
   readonly ready = new SingleEmitter(async () => {
     if (this.rtc.message.count)
@@ -62,11 +62,6 @@ export default class <T extends Sendable = Sendable> implements SimplePeer<T> {
     }
   })
 
-  readonly send = (data: T) => {
-    if (!this.message.isAlive)
-      throw Error('Unable to send data when connection is not open')
-    this.rtc.send(data)
-  }
 
   constructor(stuns: string[], client: Client, retries = 1, timeout = -1) {
     this.name = client.name
