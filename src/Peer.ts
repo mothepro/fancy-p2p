@@ -45,7 +45,7 @@ export default class <T extends Sendable = Sendable> implements SimplePeer<T> {
   readonly isYou = false
   readonly name: Name
   readonly message: Emitter<Exclude<T, ArrayBufferView>> = new Emitter
-  readonly send = this.rtc.send
+  readonly send = (data: T) => this.rtc.send(data)
 
   readonly ready = new SingleEmitter(async () => {
     if (this.rtc.message.count)
@@ -61,7 +61,6 @@ export default class <T extends Sendable = Sendable> implements SimplePeer<T> {
       this.message.deactivate(err)
     }
   })
-
 
   constructor(stuns: string[], client: Client, retries = 1, timeout = -1) {
     this.name = client.name
