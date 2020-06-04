@@ -24,6 +24,8 @@ export interface SimplePeer<T = Sendable> {
    * When false this is another peer and data is sent through the wire.
    */
   readonly isYou: boolean
+  /** Close the connection with this peer. */
+  close(): void
 }
 
 /** Simple class that can be used as a local feedback peer. */
@@ -36,6 +38,7 @@ export class MockPeer<T extends Sendable = Sendable> implements SimplePeer<T> {
     ArrayBuffer.isView(data)
       ? data.buffer
       : data)
+  readonly close = this.message.cancel
   constructor(readonly name: Name) { }
 }
 
@@ -46,6 +49,7 @@ export default class <T extends Sendable = Sendable> implements SimplePeer<T> {
   readonly name: Name
   readonly message: Emitter<Exclude<T, ArrayBufferView>> = new Emitter
   readonly send = (data: T) => this.rtc.send(data)
+  readonly close = () => this.rtc.close()
 
   readonly ready = new SingleEmitter(async () => {
     if (this.rtc.message.count)
