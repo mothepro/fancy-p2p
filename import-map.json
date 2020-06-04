@@ -1,8 +1,9 @@
-
 {
-	"imports": {
-		"@mothepro/ez-rtc/": "https://unpkg.com/@mothepro/ez-rtc@0.1.0/",
-		"@mothepro/ez-rtc": "https://unpkg.com/@mothepro/ez-rtc@0.1.0/dist/esm/index.js",
+  "imports": {
+    "@mothepro/ez-rtc/": "https://unpkg.com/@mothepro/ez-rtc@0.1.0/",
+    "@mothepro/ez-rtc": "https://unpkg.com/@mothepro/ez-rtc@0.1.0/dist/esm/index.js",
+    "@mothepro/signaling-lobby/": "https://unpkg.com/@mothepro/signaling-lobby@0.2.1/",
+    "@mothepro/signaling-lobby": "https://unpkg.com/@mothepro/signaling-lobby@0.2.1/dist/npm/index.js",
     "fancy-emitter/": "https://unpkg.com/fancy-emitter@1.5.1/",
     "fancy-emitter": "https://unpkg.com/fancy-emitter@1.5.1/dist/esm/index.js",
     "lit-element/": "//unpkg.com/lit-element@2.3.1/",
@@ -10,6 +11,5 @@
     "lit-html/": "//unpkg.com/lit-html@1.1.2/",
     "lit-html": "//unpkg.com/lit-html@1.1.2/lit-html.js",
     "lit-log": "//unpkg.com/lit-log@0.0.1/dist/esm/index.js"
-	}
+  }
 }
-

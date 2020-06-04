@@ -88,7 +88,6 @@ export default class extends LitElement {
           return html`
             <lit-lobby
               .connection=${this.p2p.connection}
-              .groupProposed=${this.p2p.initiator}
               @proposeGroup=${this.proposeGroup}
             ></lit-lobby>`
 
