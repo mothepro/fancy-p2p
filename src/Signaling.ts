@@ -83,11 +83,13 @@ export default class {
 
   private async handleClientJoin({ id, name }: ReturnType<typeof parseClientJoin>) {
     const client = new Client(id, name)
-    this.connection.activate(client)
-    this.allClients.set(id, client)
 
-    // DM the SDP for the client after creation
-    client.creator.on(sdp => this.serverSend(buildSdp(id, sdp)))
+    this.allClients.set(id, client)
+    this.sendSdpOnCreation(client)
+
+    if (this.connection.count == 0) // Ensure the SelfPeer comes out first, otherwise, just wait for it
+      await this.connection.next
+    this.connection.activate(client)
 
     // Clean up on disconnect
     for await (const _ of client.proposals);
@@ -142,6 +144,11 @@ export default class {
     if (this.server.readyState != WebSocket.OPEN)
       throw Error('WebSocket is not in an OPEN state.')
     this.server.send(data)
+  }
+
+  private async sendSdpOnCreation({ id, creator }: Client) {
+    for await (const sdp of creator)
+      this.serverSend(buildSdp(id, sdp))
   }
 
   constructor(address: URL | string, lobby: LobbyID, name: Name, protocol?: string | string[]) {

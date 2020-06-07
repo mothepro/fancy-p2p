@@ -31,10 +31,9 @@ Include the ES module on your page.
 
 ```html
 <script type="module" src="//unpkg.com/@mothepro/fancy-p2p"></script>
-<script type="module" src="app.js"></script>
 ```
 
-Initialize a P2P connection to find peers
+Then in your application, initialize a P2P to find peers and connect with them.
 
 ```typescript
 const
@@ -138,7 +137,6 @@ interface Client {
 
 The `p2p` instance provides a Listener to find new clients and a `proposeGroup` method which takes a list of clients to group with.
 
-
 ```typescript
 class P2P {
   /** Activated when a client joins the lobby. */
@@ -153,7 +151,7 @@ Which can be used to find clients and monitor when they propose, accept or rejec
 
 <details>
 
-  <summary>Example: How to listen to clients</summary>
+  <summary>Example: Listening to clients</summary>
 
 ```typescript
 async function bindClientProposals(client: Client) {
@@ -236,12 +234,12 @@ class P2P<T extends ArrayBuffer | string | Blob> {
     /**
      * Generates a random number in [0,1). Same as Math.random()
      * If `isInt` is true, than a integer in range [-2 ** 31, 2 ** 31) is generated.
-     * 
+     *
      * This value will be the same across all the other connected peers.
      */
     random(isInt?: boolean): number
 
-    /** Send data to all connected peers. */
+    /** Send data to all connected peers. Including you by default */
     broadcast(data: T, includeSelf?: boolean): void
 }
 ```
@@ -249,7 +247,7 @@ class P2P<T extends ArrayBuffer | string | Blob> {
 
 <details>
 
-  <summary>Example: How to listen to peers</summary>
+  <summary>Example: Listening to peers</summary>
 
 ```typescript
 async function bindPeerMessages(peer: Peer) {
