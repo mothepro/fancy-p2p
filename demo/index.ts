@@ -31,7 +31,7 @@ if (params.has('name'))
       name=${params.get('name')!}
       retries=5
       timeout=5000
-      version=0.2.0
+      version=0.3.0
       server=${signaling}
       lobby=${`${pkg.name}@${pkg.version}`}
       .stuns=${stuns}
