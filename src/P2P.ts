@@ -80,6 +80,14 @@ export default class <T extends Sendable = Sendable> {
         peer.send(data)
   }
 
+  /** Disconnects from the lobby. */
+  readonly leaveLobby = () => {
+    if (this.state == State.OFFLINE)
+      return // noop if not connected yet.
+    this.assert(State.LOBBY)
+    this.server.close.activate()
+  }
+
   constructor(
     /** Name used which find other clients in lobby. */
     name: Name,
@@ -108,11 +116,11 @@ export default class <T extends Sendable = Sendable> {
 
     // Bind Emitters
     this.lobbyConnection = this.server.connection
-    this.bindFinalization(name, stuns, retries, timeout)
+    this.bindFinalization(stuns, retries, timeout)
     this.bindServerClose()
   }
 
-  private async bindFinalization(myName: Name, stuns: string[], retries: number, timeout: number) {
+  private async bindFinalization(stuns: string[], retries: number, timeout: number) {
     const { code, members, myId } = await this.server.finalized.event,
       memberMap: Map<ClientID, Client> = new Map,
       ids: ClientID[] = [myId],
@@ -139,7 +147,7 @@ export default class <T extends Sendable = Sendable> {
         readies.push(peer.ready.event)
         this.peers.push(peer)
       } else
-        this.peers.push(new MockPeer(myName))
+        this.peers.push(new MockPeer(this.server.self!.name))
 
     try {
       // Every connection is connected successfully, ready up & close connection with server
