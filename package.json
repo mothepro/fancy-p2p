@@ -12,7 +12,7 @@
     "dist"
   ],
   "repository": "https://github.com/mothepro/fancy-p2p",
-  "homepage": "https://mothepro.github.io/fancy-p2p",
+  "homepage": "https://mothepro.github.io/fancy-p2pya",
   "publishConfig": {
     "access": "public"
   },
@@ -54,12 +54,12 @@
     "should": "^13.2.3",
     "should-sinon": "^0.0.6",
     "sinon": "^9.0.2",
-    "typescript": "^3.9.5"
+    "typescript": "^3.9.6"
   },
   "dependencies": {
     "@mothepro/ez-rtc": "^0.1.0",
-    "@mothepro/signaling-lobby": "^0.3.1",
-    "@types/ws": "^7.2.5",
+    "@mothepro/signaling-lobby": "^0.3.3",
+    "@types/ws": "^7.2.6",
     "fancy-emitter": "^1.5.1"
   }
 }

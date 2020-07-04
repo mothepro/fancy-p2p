@@ -30,10 +30,10 @@
   dependencies:
     regenerator-runtime "^0.13.4"
 
-"@mothepro/emojis@^1.1.1":
-  version "1.1.1"
-  resolved "https://registry.yarnpkg.com/@mothepro/emojis/-/emojis-1.1.1.tgz#f749ce812c0738ca766275facaf604c8953ac265"
-  integrity sha512-YBQjcSS5XPGA62ckyuZr0pyhFdAqrB+DGPQSBjRhmbfK1ffIszsWUK0ArMHV+4iijtmdaRduZK43YV3WzY1zXg==
+"@mothepro/emojis@^1.2.2":
+  version "1.2.2"
+  resolved "https://registry.yarnpkg.com/@mothepro/emojis/-/emojis-1.2.2.tgz#dbc34c7f8a5d1d8a7f6f49872fb658489ee92903"
+  integrity sha512-btKcXwReWimPOUKUUXTFwwPAP7/aZ5tzsrgZdZSIylHQ2tHtbHs2jMES5dQmWBI/kCu2o6oslQVupTNE0dR0pA==
 
 "@mothepro/ez-rtc@^0.1.0":
   version "0.1.0"
@@ -42,13 +42,13 @@
   dependencies:
     fancy-emitter "^1.5.1"
 
-"@mothepro/signaling-lobby@^0.3.1":
-  version "0.3.1"
-  resolved "https://registry.yarnpkg.com/@mothepro/signaling-lobby/-/signaling-lobby-0.3.1.tgz#226b53e78bda7475fbd13f2d0393e6c38f777501"
-  integrity sha512-b4GG8Ru+3wcK2zK/S20+WifZQ3FPKZkYJOpsQhN6xuZQ/sAzXlQsfTE9l4gDYIwJKfz3RMca2VflEOeflLR4Gw==
+"@mothepro/signaling-lobby@^0.3.3":
+  version "0.3.3"
+  resolved "https://registry.yarnpkg.com/@mothepro/signaling-lobby/-/signaling-lobby-0.3.3.tgz#6731c719544ab527eb3e5963efe1baf727a732b0"
+  integrity sha512-ZLIbwOTLYixrgnhBNOfnKxBnG3yAoco8E1upf7qfSheeyT822Tg53uPNbZ+bsFWcWhM3LWf8vhi5WKPCUI4CAg==
   dependencies:
-    "@mothepro/emojis" "^1.1.1"
-    fancy-emitter "^1.5.1"
+    "@mothepro/emojis" "^1.2.2"
+    fancy-emitter "^2.0.0"
     ws "^7.2.3"
     yargs "^15.3.1"
 
@@ -217,10 +217,10 @@
   resolved "https://registry.yarnpkg.com/@types/sinonjs__fake-timers/-/sinonjs__fake-timers-6.0.1.tgz#681df970358c82836b42f989188d133e218c458e"
   integrity sha512-yYezQwGWty8ziyYLdZjwxyMb0CZR49h8JALHGrxjQHWlqGgc8kLdHEgWrgL0uZ29DMvEVBDnHU2Wg36zKSIUtA==
 
-"@types/ws@^7.2.5":
-  version "7.2.5"
-  resolved "https://registry.yarnpkg.com/@types/ws/-/ws-7.2.5.tgz#513f28b04a1ea1aa9dc2cad3f26e8e37c88aae49"
-  integrity sha512-4UEih9BI1nBKii385G9id1oFrSkLcClbwtDfcYj8HJLQqZVAtb/42vXVrYvRWCcufNF/a+rZD3MxNwghA7UmCg==
+"@types/ws@^7.2.6":
+  version "7.2.6"
+  resolved "https://registry.yarnpkg.com/@types/ws/-/ws-7.2.6.tgz#516cbfb818310f87b43940460e065eb912a4178d"
+  integrity sha512-Q07IrQUSNpr+cXU4E4LtkSIBPie5GLZyyMC1QtQYRLWz701+XcoVygGUZgvLqElq1nU4ICldMYPnexlBsg3dqQ==
   dependencies:
     "@types/node" "*"
 
@@ -998,6 +998,11 @@ fancy-emitter@^1.5.1:
   version "1.5.1"
   resolved "https://registry.yarnpkg.com/fancy-emitter/-/fancy-emitter-1.5.1.tgz#0a225e4beed3f83e64fb4d258d3041bc00fb3900"
   integrity sha512-P+0iK+vM/R7jFKMtbfJzJXTwFGczwi6U0rgP0Fz3hJdNuI3ZnbgR7m22LwWmw7DHKcqJvpUtZN7QgE397l+tHw==
+
+fancy-emitter@^2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/fancy-emitter/-/fancy-emitter-2.0.0.tgz#e3278b5a4f0b0195d35c54c51826e93e13e80687"
+  integrity sha512-BnsQIOqWRfS4YcdxzkbdxMfvzM7vtO4B6cWcAaUcGknQ8vFM/+2y7FFT1cOfPqEDrYGix4Sm9lqMpqNQTJeyhQ==
 
 fast-deep-equal@^3.1.1:
   version "3.1.1"
@@ -3251,10 +3256,10 @@ typedarray-to-buffer@^3.1.5:
   dependencies:
     is-typedarray "^1.0.0"
 
-typescript@^3.9.5:
-  version "3.9.5"
-  resolved "https://registry.yarnpkg.com/typescript/-/typescript-3.9.5.tgz#586f0dba300cde8be52dd1ac4f7e1009c1b13f36"
-  integrity sha512-hSAifV3k+i6lEoCJ2k6R2Z/rp/H3+8sdmcn5NrS3/3kE7+RyZXm9aqvxWqjEXHAd8b0pShatpcdMTvEdvAJltQ==
+typescript@^3.9.6:
+  version "3.9.6"
+  resolved "https://registry.yarnpkg.com/typescript/-/typescript-3.9.6.tgz#8f3e0198a34c3ae17091b35571d3afd31999365a"
+  integrity sha512-Pspx3oKAPJtjNwE92YS05HQoY7z2SFyOpHo9MqJor3BXAGNaPUs83CuVp9VISFkSjyRfiTpmKuAYGJB7S7hOxw==
 
 unique-string@^2.0.0:
   version "2.0.0"
