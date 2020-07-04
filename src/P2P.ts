@@ -69,6 +69,14 @@ export default class <T extends Sendable = Sendable> {
     this.server.proposeGroup(...members)
 
   /**
+   * Whether a group with the following memebers has been proposed or answered.
+   * 
+   * `state` must be `State.LOBBY`.
+   */
+  readonly groupExists: (...members: SimpleClient[]) => boolean = (...members) => this.assert(State.LOBBY) &&
+    this.server.groupExists(...members)
+
+  /**
    * Send data to all connected peers. 
    * 
    * `state` must be `State.READY`.

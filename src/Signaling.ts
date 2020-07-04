@@ -172,8 +172,6 @@ export default class {
   proposeGroup(...members: SimpleClient[]) {
     const ids: HashableSet<ClientID> = new HashableSet
 
-    // TODO improve this??
-    // for some reason this allows members to include self.
     for (const [id, client] of this.allClients)
       if (members.includes(client))
         ids.add(id)
@@ -193,5 +191,17 @@ export default class {
     this.self!.proposals.activate({ members, ack })
 
     return this.groups.get(ids.hash)!
+  }
+
+  groupExists(...members: SimpleClient[]) {
+    const ids: HashableSet<ClientID> = new HashableSet
+
+    // TODO improve this??
+    // for some reason this allows members to include self.
+    for (const [id, client] of this.allClients)
+      if (members.includes(client))
+        ids.add(id)
+
+    return !!ids.size && this.groups.has(ids.hash)
   }
 }

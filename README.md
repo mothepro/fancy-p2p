@@ -7,7 +7,7 @@
 + [Fancy P2P Demo](https://mothepro.github.io/fancy-p2p)
 + [Amazons](https://amazons.parkshade.com)
 
-## Why??
+## Why
 
 Direct connections between browsers is well supported with WebRTC, but this is difficult to set up and use.
 
@@ -144,6 +144,9 @@ class P2P {
   
   /** Propose a group with other clients connected to this lobby. */
   proposeGroup(...members: SimpleClient[]): void
+
+  /** Whether a group with the following memebers has been proposed or answered. */
+  groupExists(...members: SimpleClient[]): boolean
 }
 ```
 
@@ -243,7 +246,6 @@ class P2P<T extends ArrayBuffer | string | Blob> {
     broadcast(data: T, includeSelf?: boolean): void
 }
 ```
-
 
 <details>
 
