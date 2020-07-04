@@ -1,6 +1,6 @@
 import { SafeSingleEmitter, SingleEmitter, SafeEmitter, Emitter } from 'fancy-emitter'
 import { ClientID, Name, LobbyID, Code } from '@mothepro/signaling-lobby'
-import { parseGroupFinalize, parseGroupChange, parseClientLeave, parseClientJoin, parseSdp } from '../util/parsers.js'
+import { parseGroupFinalize, parseGroupChange, parseClientLeave, parseClientJoin, parseSdp, parseYourName } from '../util/parsers.js'
 import { buildProposal, buildSdp } from '../util/builders.js'
 import Client, { SimpleClient, MockClient } from './Client.js'
 import HashableSet from '../util/HashableSet.js'
@@ -21,7 +21,7 @@ class LeaveError extends Error {
  */
 export default class {
 
-  private self?: MockClient
+  self?: MockClient
 
   /** Socket to signaling server. */
   private readonly server!: WebSocket
@@ -55,6 +55,10 @@ export default class {
         this.getClient(from).acceptor.activate(sdp)
       } else
         switch (data.getUint8(0)) {
+          case Code.YOUR_NAME:
+            this.connection.activate(this.self = new MockClient(parseYourName(data)))
+            break
+
           case Code.CLIENT_JOIN:
             this.handleClientJoin(parseClientJoin(data))
             break
@@ -151,11 +155,12 @@ export default class {
       this.serverSend(buildSdp(id, sdp))
   }
 
-  constructor(address: URL | string, lobby: LobbyID, name: Name, protocol?: string | string[]) {
+  constructor(address: URL | string, lobby: LobbyID, name?: Name, protocol?: string | string[]) {
     if (typeof address == 'string')
       address = new URL(address)
     address.searchParams.set('lobby', lobby)
-    address.searchParams.set('name', name)
+    if (name)
+      address.searchParams.set('name', name)
 
     this.server = new WebSocket(address.toString(), protocol)
     this.server.binaryType = 'arraybuffer'
@@ -164,8 +169,9 @@ export default class {
     this.server.addEventListener('error', () => this.close.deactivate(Error('Connection to Server closed unexpectedly.')))
     this.server.addEventListener('message', async ({ data }) => this.message.activate(new DataView(data)))
 
-    // Activate connection with self once ready
-    this.ready.once(() => setTimeout(this.connection.activate, 0, this.self = new MockClient(name)))
+    // Activate connection with self once ready, if the server won't assign the name
+    if (name)
+      this.ready.once(() => setTimeout(this.connection.activate, 0, this.self = new MockClient(name)))
   }
 
   /** Proposes a group to the server and returns the emitter that will be activated when clients accept it. */

@@ -1,4 +1,4 @@
-import { ClientID, Code, Size } from '@mothepro/signaling-lobby'
+import { ClientID, Code, Size, Name } from '@mothepro/signaling-lobby'
 import { MessageType } from './builders.js'
 import HashableSet from './HashableSet.js'
 
@@ -17,6 +17,14 @@ export function parseClientIds(offset: number, data: DataView) {
   for (let i = offset; i < data.byteLength; i += Size.SHORT)
     ids.add(data.getUint16(i, true))
   return ids
+}
+
+/** Helper to get name that server assigns. */
+export function parseYourName(data: DataView): Name {
+  if (data.getUint8(0) == Code.YOUR_NAME && data.byteLength > Size.CHAR)
+    return decoder.decode(data.buffer.slice(Size.CHAR))
+
+  throw Error(`Expected a your name message, but got ${data}`)
 }
 
 /** Helper to get status of a Client joining. */
