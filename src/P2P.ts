@@ -1,8 +1,7 @@
 import { Emitter, SafeListener } from 'fancy-emitter'
-import type { Sendable } from '@mothepro/ez-rtc'
 import { Name, LobbyID, Max, ClientID } from '@mothepro/signaling-lobby'
 import Client, { SimpleClient } from './Client.js'
-import Peer, { SimplePeer, MockPeer } from './Peer.js'
+import Peer, { MySimplePeer, MockPeer, Sendable } from './Peer.js'
 import rng from '../util/random.js'
 import Signaling from './Signaling.js'
 
@@ -34,7 +33,7 @@ export default class <T extends Sendable = Sendable> {
   readonly lobbyConnection: SafeListener<SimpleClient>
 
   /** The peers who's connections are still open */
-  readonly peers: SimplePeer<T>[] = []
+  readonly peers: MySimplePeer<T>[] = []
 
   /** Generator for random integers that will be consistent across connections within [-2 ** 31, 2 ** 31). */
   // TODO determine if this should be accessible from the outside
@@ -152,7 +151,7 @@ export default class <T extends Sendable = Sendable> {
     for (const id of ids)
       if (memberMap.has(id)) {
         const peer = new Peer<T>(stuns, memberMap.get(id)!, retries, timeout)
-        readies.push(peer.ready.event)
+        readies.push(peer.ready)
         this.peers.push(peer)
       } else
         this.peers.push(new MockPeer(this.server.self!.name))
