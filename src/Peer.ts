@@ -12,7 +12,7 @@ class ErrorWithReasons extends Error {
 }
 
 /** Represents a direct connection to a peer found in the signalling lobby. */
-export interface SimplePeer<T = Sendable> {
+export interface MySimplePeer<T = Sendable> {
   /** Name of the new peer. */
   readonly name: Name
   /** Send data to activate the `message` listener for the peer. */
@@ -29,7 +29,7 @@ export interface SimplePeer<T = Sendable> {
 }
 
 /** Simple class that can be used as a local feedback peer. */
-export class MockPeer<T extends Sendable = Sendable> implements SimplePeer<T> {
+export class MockPeer<T extends Sendable = Sendable> implements MySimplePeer<T> {
   readonly isYou = true
   readonly message: Emitter<Exclude<T, ArrayBufferView>> = new Emitter
   // Convert ArrayBufferView's to their raw buffer to match how it is over the wire.
@@ -43,8 +43,7 @@ export class MockPeer<T extends Sendable = Sendable> implements SimplePeer<T> {
 }
 
 // TODO support making connections until one is established.
-export default class <T extends Sendable = Sendable> implements SimplePeer<T> {
-  private rtc!: RTC
+export default class <T extends Sendable = Sendable> implements MySimplePeer<T> {
   readonly isYou = false
   readonly name: Name
   readonly message: Emitter<Exclude<T, ArrayBufferView>> = new Emitter
