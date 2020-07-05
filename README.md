@@ -272,3 +272,4 @@ for (const peer of p2p.peers)
 
 + Test RTC possibility before starting server connection
 + Support trickle ICE
++ Improve peer lib `simple-peer` is messes with buffer

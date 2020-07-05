@@ -1,15 +1,10 @@
-import { SingleEmitter, Emitter, Listener, filterValue } from 'fancy-emitter'
+import { Emitter, Listener } from 'fancy-emitter'
 import type { Name } from '@mothepro/signaling-lobby'
-import RTC, { Sendable, State } from '@mothepro/ez-rtc'
+import type SimplePeer from 'simple-peer'
 import Client from './Client.js'
-import delay from '../util/delay.js'
 
-class ErrorWithReasons extends Error {
-  constructor(
-    readonly reasons: Error[],
-    message?: string
-  ) { super(message) }
-}
+type Receiveable = Blob | ArrayBuffer
+export type Sendable = Receiveable | ArrayBufferView
 
 /** Represents a direct connection to a peer found in the signalling lobby. */
 export interface MySimplePeer<T = Sendable> {
@@ -42,68 +37,60 @@ export class MockPeer<T extends Sendable = Sendable> implements MySimplePeer<T> 
   constructor(readonly name: Name) { }
 }
 
-// TODO support making connections until one is established.
 export default class <T extends Sendable = Sendable> implements MySimplePeer<T> {
+  private rtc!: SimplePeer.Instance
   readonly isYou = false
   readonly name: Name
   readonly message: Emitter<Exclude<T, ArrayBufferView>> = new Emitter
+  // @ts-ignore stupid...
   readonly send = (data: T) => this.rtc.send(data)
-  readonly close = () => this.rtc.close()
-
-  readonly ready = new SingleEmitter(async () => {
-    if (this.rtc.message.count)
-      console.warn(this.rtc.message.count, 'messages have been sent through', this.name, 'p2p channel before listener was bound')
-
-    // @ts-ignore This cast okay, since T is a subclass of Sendable, and the type is only guaranteed through the generic
-    this.rtc.message.on(this.message.activate)
-
-    try {
-      await filterValue(this.rtc.statusChange, State.OFFLINE)
-      this.message.cancel()
-    } catch (err) {
-      this.message.deactivate(err)
-    }
-  })
+  readonly close = () => this.rtc.destroy()
+  readonly ready: Promise<void>
 
   constructor(stuns: string[], client: Client, retries = 1, timeout = -1) {
     this.name = client.name
-    this.makeRtc(stuns, client, retries, timeout)
+    this.ready = this.makeRtc(stuns, client, retries, timeout)
+      .then(() => { // Bind events to the message emitter
+        this.rtc.once('close', this.message.cancel)
+        this.rtc.once('error', this.message.deactivate)
+        this.rtc.on('data', data => this.message.activate(ArrayBuffer.isView(data) ? data.buffer : data))
+      })
+      // Cancel early since no events will ever occur.
+      .catch((reason: Error) => this.message.cancel() && Promise.reject(reason))
   }
 
-  private async makeRtc(stuns: string[], { isOpener, acceptor, creator }: Client, retries: number, timeout: number) {
-    // This holds the errors thrown for the RTCs that were unable to be created.
-    const reasons: Error[] = []
+  private async makeRtc(stuns: string[], client: Client, retries: number, timeout: number): Promise<unknown> {
+    // @ts-ignore from the `import 'simple-peer'`
+    this.rtc = new SimplePeer({
+      initiator: await client.isOpener.event,
+      config: { iceServers: [{ urls: stuns }] },
+      trickle: false, // TODO the server should support this eventually... may even work now!
+      offerConstraints: {
+        iceRestart: true, // Forces refresh of candidates
+        offerToReceiveAudio: false,
+        offerToReceiveVideo: false,
+        voiceActivityDetection: false,
+      },
+      answerConstraints: {
+        iceRestart: true, // Forces refresh of candidates
+        offerToReceiveAudio: false,
+        offerToReceiveVideo: false,
+        voiceActivityDetection: false,
+      },
+    })
+    
+    // Exchange the SDPs
+    this.rtc
+      .once('signal', client.creator.activate) // Change to `.on` if using trickle
+      .signal(await client.acceptor.next)
 
-    for (let attempt = 0; attempt < Math.max(1, retries); attempt++)
-      try {
-        this.rtc = new RTC(stuns)
-
-        // Set before exchange... this is important!
-        const isConnected = filterValue(this.rtc.statusChange, State.CONNECTED)
-
-        // Exchange the SDPs
-        if (await isOpener.event) // Openers should create offer -> accept answer
-          creator.activate(await this.rtc.createOffer())
-        
-        this.rtc.acceptSDP(await acceptor.next)
-
-        if (!await isOpener.event) // Closers should accept offter -> create answer
-          creator.activate(await this.rtc.createAnswer())
-
-        // Wait until ready, or timeout if possible.
-        await Promise.race([
-          isConnected,
-          delay(timeout).then(() => Promise.reject(Error(`Connection didn't become ready in ${timeout}ms`))),
-        ])
-
-        // leave function behind... we are good 😊
-        this.ready.activate()
-        return
-      } catch (err) {
-        reasons.push(err)
-      }
-
-    this.message.cancel() // Cancel early since no events will ever occur.
-    this.ready.deactivate(new ErrorWithReasons(reasons, `Unable to initializes a Direct Connection with ${this.name} after ${retries} attempts`))
+    return new Promise((resolve, reject) => {
+      setTimeout(() => reject(Error(`Connection didn't become ready in ${timeout}ms`)), timeout)
+      this.rtc
+        .once('connect', resolve)
+        .once('error', reject)
+    }).catch(reason => retries > 0
+      ? this.makeRtc(stuns, client, retries - 1, timeout)
+      : Promise.reject(reason))
   }
 }

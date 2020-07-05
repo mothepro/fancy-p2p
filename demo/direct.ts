@@ -10,7 +10,9 @@ const enum Message {
   GENERATE_RANDOM,
 }
 
-const orderTestLimit = 5e4
+const decoder = new TextDecoder,
+  encoder = new TextEncoder,
+  orderTestLimit = 5e4
 
 declare global {
   interface KeyboardEvent {
@@ -63,47 +65,45 @@ export default class extends LitElement {
   private async bindMessage({ message, send, name }: Peer) {
     try {
       for await (const data of message) {
-        if (data instanceof ArrayBuffer) {
-          const view = new DataView(data)
-          switch (view.getInt8(0)) {
-            case Message.CHECK:
-              this.orderedMessages.push(view.getUint32(1, true))
-              if (this.orderedMessages.length == orderTestLimit) {
-                for (let i = 0; i < this.orderedMessages.length - 1; i++) {
-                  if (this.orderedMessages[i] > this.orderedMessages[i + 1])
-                    this.log(this.orderedMessages[i], 'should have come before', this.orderedMessages[i + 1])
-                }
-                this.chat = `Finished checking order of ${orderTestLimit} messages`
-                this.orderedMessages.length = 0
+        if (!(data instanceof ArrayBuffer))
+          throw Error(`${name} sent unexpected data: ${data}`)
+
+        const view = new DataView(data)
+        switch (view.getInt8(0)) {
+          case Message.CHECK:
+            this.orderedMessages.push(view.getUint32(1, true))
+            if (this.orderedMessages.length == orderTestLimit) {
+              for (let i = 0; i < this.orderedMessages.length - 1; i++) {
+                if (this.orderedMessages[i] > this.orderedMessages[i + 1])
+                  this.log(this.orderedMessages[i], 'should have come before', this.orderedMessages[i + 1])
               }
-              break
+              this.chat = `Finished checking order of ${orderTestLimit} messages`
+              this.orderedMessages.length = 0
+            }
+            break
 
-            case Message.GENERATE_RANDOM:
-              this.chat = `${name} shared the random integer ${this.nextRandom} for us`
-              this.dispatchEvent(new CustomEvent('requestRNG', { bubbles: true }))
-              break
+          case Message.GENERATE_RANDOM:
+            this.chat = `${name} shared the random integer ${this.nextRandom} for us`
+            this.dispatchEvent(new CustomEvent('requestRNG', { bubbles: true }))
+            break
 
-            case Message.RTT:
-              if (this.initRtt) {
-                this.chat = `Round Trip Time with ${name} is ${this.elapsedTime - this.initRtt}μs`
-                this.replies++
-              } else
-                send(new Uint8Array([Message.RTT]))
+          case Message.RTT:
+            if (this.initRtt) {
+              this.chat = `Round Trip Time with ${name} is ${this.elapsedTime - this.initRtt}μs`
+              this.replies++
+            } else
+              send(new Uint8Array([Message.RTT]))
 
-              // All living peers responded
-              if (this.replies == this.peers.length) {
-                delete this.initRtt
-                this.replies = 0
-              }
-              break
+            // All living peers responded
+            if (this.replies == this.peers.length) {
+              delete this.initRtt
+              this.replies = 0
+            }
+            break
 
-            default:
-              throw Error(`${name} sent unexpected ${view.byteLength} bytes ${view}`)
-          }
+          default:
+            this.chat = `${name} says "${decoder.decode(data)}"`
         }
-
-        if (typeof data == 'string')
-          this.chat = `${name} says "${data}"`
       }
     } catch (err) {
       this.log(err)
@@ -145,14 +145,14 @@ export default class extends LitElement {
 
   private sendData = (event: Event) => {
     event.preventDefault()
-    this.dispatchEvent(new CustomEvent('broadcast', { detail: this.data, bubbles: true }))
+    this.dispatchEvent(new CustomEvent('broadcast', { detail: encoder.encode(this.data), bubbles: true }))
     this.data = ''
   }
 
   private sendDirect = ({ name, send }: Peer) => (event: Event) => {
     try {
       event.preventDefault()
-      send(this.data)
+      send(encoder.encode(this.data))
       this.log(`Sending ${name} "${this.data}"`)
       this.data = ''
     } catch (err) {
