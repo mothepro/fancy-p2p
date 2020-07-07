@@ -59,10 +59,10 @@ export default class <T extends Sendable = Sendable> implements MySimplePeer<T> 
       .catch((reason: Error) => this.message.cancel() && Promise.reject(reason))
   }
 
-  private async makeRtc(stuns: string[], client: Client, retries: number, timeout: number): Promise<unknown> {
+  private makeRtc(stuns: string[], client: Client, retries: number, timeout: number): Promise<unknown> {
     // @ts-ignore from the `import 'simple-peer'`
     this.rtc = new SimplePeer({
-      initiator: await client.isOpener.event,
+      initiator: client.isOpener,
       config: { iceServers: [{ urls: stuns }] },
       trickle: false, // TODO the server should support this eventually... may even work now!
       offerConstraints: {
@@ -80,9 +80,9 @@ export default class <T extends Sendable = Sendable> implements MySimplePeer<T> 
     })
     
     // Exchange the SDPs
-    this.rtc
-      .once('signal', client.creator.activate) // Change to `.on` if using trickle
-      .signal(await client.acceptor.next)
+    // If using trickle, listen to more than just 1 event from each
+    this.rtc.once('signal', client.creator.activate)
+    client.acceptor.next.then(sdp => this.rtc.signal(sdp))
 
     return new Promise((resolve, reject) => {
       setTimeout(() => reject(Error(`Connection didn't become ready in ${timeout}ms`)), timeout)

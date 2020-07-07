@@ -1,4 +1,4 @@
-import { SafeEmitter, SafeListener, Emitter, SafeSingleEmitter, Listener } from 'fancy-emitter'
+import { SafeEmitter, SafeListener, Emitter, Listener } from 'fancy-emitter'
 import type { ClientID, Name } from '@mothepro/signaling-lobby'
 
 /** Represents another client in the same lobby and signaling server as we are. */
@@ -40,12 +40,8 @@ export default class implements SimpleClient {
     ack: Emitter<SimpleClient>
   }> = new Emitter
 
-  /**
-   * Activates when group is finalized.
-   * Resolves with whether this connection should be an opener or closer.
-   */
-  // TODO doesn't need to be exposed as an emitter
-  readonly isOpener: SafeSingleEmitter<boolean> = new SafeSingleEmitter
+  /** Whether this connection should be an opener or closer. Set before the server finalizes the group. */
+  isOpener?: boolean
 
   /** Activate with the creation of an SDP to send it to the corresponding client. */
   readonly creator: SafeEmitter<RTCSessionDescriptionInit> = new SafeEmitter

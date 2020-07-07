@@ -131,7 +131,7 @@ export default class {
     for (const clientId of members)
       // The `cmp` is sent from the server as a way to determine
       // What expression will evaluate the same on both sides of the equation...
-      this.getClient(clientId).isOpener.activate(cmp < clientId)
+      this.getClient(clientId).isOpener = cmp < clientId
 
     this.finalized.activate({ code, myId: cmp, members: [...members].map(this.getClient) })
   }
