@@ -2,8 +2,8 @@ import { Emitter, SafeListener } from 'fancy-emitter'
 import { Name, LobbyID, Max, ClientID } from '@mothepro/signaling-lobby'
 import Client, { SimpleClient } from './Client.js'
 import Peer, { MySimplePeer, MockPeer, Sendable } from './Peer.js'
-import rng from '../util/random.js'
 import Signaling, { State as SignalingState } from './Signaling.js'
+import rng from '../util/random.js'
 
 /** Represent where we are in the process of connecting to some peers. */
 export const enum State {
@@ -25,9 +25,7 @@ export default class <T extends Sendable = Sendable> {
   readonly state: State = State.OFFLINE
 
   /** Activated when the state changes, Cancels when finalized, Deactivates when error is throw. */
-  readonly stateChange = new Emitter<State>(
-    newState => (this.state as State) = newState,
-    state => state == State.READY && this.server.stateChange.cancel())
+  readonly stateChange = new Emitter<State>(newState => (this.state as State) = newState)
 
   /** Activated when a client joins the lobby. */
   readonly lobbyConnection: SafeListener<SimpleClient>
@@ -134,34 +132,28 @@ export default class <T extends Sendable = Sendable> {
             this.stateChange.activate(State.LOADING)
             this.rng = rng(this.server.code!)
 
-            const memberMap: Map<ClientID, Client> = new Map,
-              ids: ClientID[] = [this.server.myId!],
-              readies: Promise<any>[] = []
-
-            for (const client of this.server.members!) {
-              memberMap.set(client.id, client)
-              ids.push(client.id)
-            }
+            const readies: Promise<any>[] = [],
+              members: Array<Client | { id: ClientID }> = [
+                ...this.server.members!,
+                { id: this.server.myId! }
+              ]
 
             // sort the IDs then use a consistent fisher yates shuffle on them
-            ids.sort((a, b) => a - b)
-            for (let i = ids.length - 1; i > 0; i--) {
+            members.sort(({ id: firstID }, { id: secondID }) => firstID - secondID)
+            for (let i = members.length - 1; i > 0; i--) {
               const j = Math.abs(this.rng.next().value) % i
-                ;[ids[j], ids[i]] = [ids[i], ids[j]]
+                ;[members[j], members[i]] = [members[i], members[j]]
             }
 
-            for (const id of ids) {
-              // If the ID is in the map add a real peer in it's place, otherwise just a mock will do
-              const peer = memberMap.has(id)
-                ? new Peer<T>(stuns, memberMap.get(id)!, retries, timeout)
-                : new MockPeer<T>(this.server.self!.name)
-              readies.push((peer as any).ready) // This is okay, cause MockPeer "ready" promise will resolve instantly
-              this.peers.push(peer)
-            }
+            for (const client of members)
+              this.peers.push(client instanceof Client
+                ? new Peer<T>(stuns, client, retries, timeout)
+                : new MockPeer<T>(this.server.self!.name))
 
             // Every connection is connected successfully, ready up & close connection with server
-            await Promise.all(readies)
+            await Promise.all(this.peers.map(peer => (peer as any).ready)) // Cast cause MockPeer.ready (undefined) will resolve instantly
             this.stateChange.activate(State.READY)
+            this.server.stateChange.cancel()
         }
       this.assert(State.READY, 'Connection with server closed prematurely')
     } catch (err) {

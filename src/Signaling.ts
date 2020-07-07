@@ -15,8 +15,10 @@ class LeaveError extends Error {
 export const enum State {
   /** Connection with server is not yet open, i.e. closed. */
   CLOSED,
+  
   /** When our connection to signaling server is established. */
   READY,
+
   /** A group has been finalized and peers can began establishing direct connections. */
   FINALIZED,
 }
