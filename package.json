@@ -60,7 +60,7 @@
   "dependencies": {
     "@mothepro/signaling-lobby": "^0.3.3",
     "@types/ws": "^7.2.6",
-    "fancy-emitter": "^1.5.1",
+    "fancy-emitter": "^2.0.0",
     "simple-peer": "^9.7.2"
   }
 }
