@@ -15,8 +15,10 @@ class LeaveError extends Error {
 export const enum State {
   /** Connection with server is not yet open, i.e. closed. */
   CLOSED,
+  
   /** When our connection to signaling server is established. */
   READY,
+
   /** A group has been finalized and peers can began establishing direct connections. */
   FINALIZED,
 }
@@ -185,7 +187,7 @@ export default class {
     this.server.addEventListener('message', async ({ data }) => this.message.activate(new DataView(data)))
 
     // Close connection on error or completion
-    filter(this.stateChange, () => false).finally(() => this.server.close())
+    filter(this.stateChange).finally(() => this.server.close())
       .catch(() => { }) // handle error elsewhere
 
     // Activate connection with self once ready, if the server won't assign the name
