@@ -3,7 +3,7 @@ import { Name, LobbyID, Max, ClientID } from '@mothepro/signaling-lobby'
 import Client, { SimpleClient } from './Client.js'
 import Peer, { MySimplePeer, MockPeer, Sendable } from './Peer.js'
 import rng from '../util/random.js'
-import Signaling from './Signaling.js'
+import Signaling, { State as SignalingState } from './Signaling.js'
 
 /** Represent where we are in the process of connecting to some peers. */
 export const enum State {
@@ -27,7 +27,7 @@ export default class <T extends Sendable = Sendable> {
   /** Activated when the state changes, Cancels when finalized, Deactivates when error is throw. */
   readonly stateChange = new Emitter<State>(
     newState => (this.state as State) = newState,
-    state => state == State.READY && this.server.close.activate())
+    state => state == State.READY && this.server.stateChange.cancel())
 
   /** Activated when a client joins the lobby. */
   readonly lobbyConnection: SafeListener<SimpleClient>
@@ -92,7 +92,7 @@ export default class <T extends Sendable = Sendable> {
     if (this.state == State.OFFLINE)
       return // noop if not connected yet.
     this.assert(State.LOBBY)
-    this.server.close.activate()
+    this.server.stateChange.cancel()
   }
 
   constructor(
@@ -117,57 +117,52 @@ export default class <T extends Sendable = Sendable> {
     }) {
     this.server = new Signaling(address, lobby, name, version)
 
-    // Bind states across classes
-    this.server.ready.once(() => this.stateChange.activate(State.LOBBY))
-    this.server.finalized.once(() => this.stateChange.activate(State.LOADING))
-
     // Bind Emitters
     this.lobbyConnection = this.server.connection
-    this.bindFinalization(stuns, retries, timeout)
-    this.bindServerClose()
+    this.bindServerState(stuns, retries, timeout)
   }
 
-  private async bindFinalization(stuns: string[], retries: number, timeout: number) {
-    const { code, members, myId } = await this.server.finalized.event,
-      memberMap: Map<ClientID, Client> = new Map,
-      ids: ClientID[] = [myId],
-      readies: Promise<void>[] = []
-
-    this.rng = rng(code)
-
-    for (const client of members) {
-      memberMap.set(client.id, client)
-      ids.push(client.id)
-    }
-
-    // sort the IDs then use a consistent fisher yates shuffle on them
-    ids.sort((a, b) => a - b)
-    for (let i = ids.length - 1; i > 0; i--) {
-      const j = Math.abs(this.rng.next().value) % i;
-      [ids[j], ids[i]] = [ids[i], ids[j]]
-    }
-
-    // If the ID is in the map add a real peer in it's place, otherwise just a mock will do
-    for (const id of ids)
-      if (memberMap.has(id)) {
-        const peer = new Peer<T>(stuns, memberMap.get(id)!, retries, timeout)
-        readies.push(peer.ready)
-        this.peers.push(peer)
-      } else
-        this.peers.push(new MockPeer(this.server.self!.name))
-
+  private async bindServerState(stuns: string[], retries: number, timeout: number) {
     try {
-      // Every connection is connected successfully, ready up & close connection with server
-      await Promise.all(readies)
-      this.stateChange.activate(State.READY)
-    } catch (err) {
-      this.stateChange.deactivate(err)
-    }
-  }
+      for await (const state of this.server.stateChange)
+        switch (state) {
+          case SignalingState.READY:
+            this.stateChange.activate(State.LOBBY)
+            break
 
-  private async bindServerClose() {
-    try {
-      await this.server.close.event
+          case SignalingState.FINALIZED:
+            this.stateChange.activate(State.LOADING)
+            this.rng = rng(this.server.code!)
+
+            const memberMap: Map<ClientID, Client> = new Map,
+              ids: ClientID[] = [this.server.myId!],
+              readies: Promise<any>[] = []
+
+            for (const client of this.server.members!) {
+              memberMap.set(client.id, client)
+              ids.push(client.id)
+            }
+
+            // sort the IDs then use a consistent fisher yates shuffle on them
+            ids.sort((a, b) => a - b)
+            for (let i = ids.length - 1; i > 0; i--) {
+              const j = Math.abs(this.rng.next().value) % i
+                ;[ids[j], ids[i]] = [ids[i], ids[j]]
+            }
+
+            for (const id of ids) {
+              // If the ID is in the map add a real peer in it's place, otherwise just a mock will do
+              const peer = memberMap.has(id)
+                ? new Peer<T>(stuns, memberMap.get(id)!, retries, timeout)
+                : new MockPeer<T>(this.server.self!.name)
+              readies.push((peer as any).ready) // This is okay, cause MockPeer "ready" promise will resolve instantly
+              this.peers.push(peer)
+            }
+
+            // Every connection is connected successfully, ready up & close connection with server
+            await Promise.all(readies)
+            this.stateChange.activate(State.READY)
+        }
       this.assert(State.READY, 'Connection with server closed prematurely')
     } catch (err) {
       this.stateChange.deactivate(err)
