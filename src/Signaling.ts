@@ -1,9 +1,10 @@
 import { SafeEmitter, Emitter, filterValue, filter } from 'fancy-emitter'
-import { ClientID, Name, LobbyID, Code } from '@mothepro/signaling-lobby'
+import type { ClientID, Name, LobbyID } from '@mothepro/signaling-lobby'
 import { parseGroupFinalize, parseGroupChange, parseClientLeave, parseClientJoin, parseSdp, parseYourName } from '../util/parsers.js'
 import { buildProposal, buildSdp } from '../util/builders.js'
 import Client, { SimpleClient, MockClient } from './Client.js'
 import HashableSet from '../util/HashableSet.js'
+import { Code } from '../util/constants.js'
 
 class LeaveError extends Error {
   constructor(

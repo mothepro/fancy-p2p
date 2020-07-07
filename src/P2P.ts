@@ -1,9 +1,10 @@
 import { Emitter, SafeListener } from 'fancy-emitter'
-import { Name, LobbyID, Max, ClientID } from '@mothepro/signaling-lobby'
+import type { Name, LobbyID, ClientID } from '@mothepro/signaling-lobby'
 import Client, { SimpleClient } from './Client.js'
 import Peer, { MySimplePeer, MockPeer, Sendable } from './Peer.js'
 import Signaling, { State as SignalingState } from './Signaling.js'
 import rng from '../util/random.js'
+import { Max } from '../util/constants.js'
 
 /** Represent where we are in the process of connecting to some peers. */
 export const enum State {

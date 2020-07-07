@@ -1,6 +1,7 @@
-import { ClientID, Code, Size, Name } from '@mothepro/signaling-lobby'
+import type { ClientID, Name } from '@mothepro/signaling-lobby'
 import { MessageType } from './builders.js'
 import HashableSet from './HashableSet.js'
+import { Size, Code } from './constants.js'
 
 /* Parse ArrayBuffers to sent from server to us. */
 
