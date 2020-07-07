@@ -187,7 +187,7 @@ export default class {
     this.server.addEventListener('message', async ({ data }) => this.message.activate(new DataView(data)))
 
     // Close connection on error or completion
-    filter(this.stateChange, () => false).finally(() => this.server.close())
+    filter(this.stateChange).finally(() => this.server.close())
       .catch(() => { }) // handle error elsewhere
 
     // Activate connection with self once ready, if the server won't assign the name
