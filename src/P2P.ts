@@ -133,8 +133,7 @@ export default class <T extends Sendable = Sendable> {
             this.stateChange.activate(State.LOADING)
             this.rng = rng(this.server.code!)
 
-            const readies: Promise<any>[] = [],
-              members: Array<Client | { id: ClientID }> = [
+            const members: Array<Client | { id: ClientID }> = [
                 ...this.server.members!,
                 { id: this.server.myId! }
               ]
