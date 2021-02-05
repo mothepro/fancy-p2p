@@ -48,8 +48,8 @@ export default class <T extends Sendable = Sendable> {
   }
 
   /**
-   * Generates a random number in [0,1). Same as Math.random()
-   * If `isInt` is true, than a integer in range [-2 ** 31, 2 ** 31) is generated.
+   * Generates a random number in [0,1), same as Math.random()
+   * If `isInt` is true, then an integer in range [-2 ** 31, 2 ** 31) is generated instead.
    * 
    * `state` must be `State.READY`.
    */
@@ -97,7 +97,7 @@ export default class <T extends Sendable = Sendable> {
   constructor(
     /** Name used which find other clients in lobby. */
     name: Name,
-    { stuns, lobby, server: { address, version }, retries = 1, timeout = -1 }: {
+    { stuns, lobby, server: { address, version }, fallback = false, retries = 1, timeout = -1 }: {
       /** STUN servers to use to initialize P2P connections */
       stuns: string[]
       /** Lobby ID to use for this app */
@@ -109,6 +109,8 @@ export default class <T extends Sendable = Sendable> {
         /** The version of `@mothepro/signaling-lobby` the signaling server is running */
         version: string
       }
+      /** Whether to use the signaling server as a fallback when a direct connection to peer can not be established. */
+      fallback?: boolean
       /** Number of times to attempt to make an RTC connection. Defaults to 1 */
       retries?: number
       /** The number of milliseconds to wait before giving up on the connection. Doesn't give up by default */
@@ -118,10 +120,10 @@ export default class <T extends Sendable = Sendable> {
 
     // Bind Emitters
     this.lobbyConnection = this.server.connection
-    this.bindServerState(stuns, retries, timeout)
+    this.bindServerState(stuns, retries, timeout, fallback)
   }
 
-  private async bindServerState(stuns: string[], retries: number, timeout: number) {
+  private async bindServerState(stuns: string[], retries: number, timeout: number, fallback: boolean) {
     try {
       for await (const state of this.server.stateChange)
         switch (state) {
@@ -134,9 +136,9 @@ export default class <T extends Sendable = Sendable> {
             this.rng = rng(this.server.code!)
 
             const members: Array<Client | { id: ClientID }> = [
-                ...this.server.members!,
-                { id: this.server.myId! }
-              ]
+              ...this.server.members!,
+              { id: this.server.myId! }
+            ]
 
             // sort the IDs then use a consistent fisher yates shuffle on them
             members.sort(({ id: firstID }, { id: secondID }) => firstID - secondID)
@@ -147,13 +149,16 @@ export default class <T extends Sendable = Sendable> {
 
             for (const client of members)
               this.peers.push(client instanceof Client
-                ? new Peer<T>(stuns, client, retries, timeout)
+                ? new Peer<T>(stuns, client, retries, timeout, fallback ? this.server : undefined)
                 : new MockPeer<T>(this.server.self!.name))
 
             // Every connection is connected successfully, ready up & close connection with server
-            await Promise.all(this.peers.map(peer => (peer as any).ready)) // Cast cause MockPeer.ready (undefined) will resolve instantly
+            this.server.stateChange.activate(
+              (await Promise.all(this.peers.map(peer => (peer as any).ready))) // Cast cause MockPeer.ready (undefined) will resolve instantly
+                .some(directConnection => directConnection === false)
+                ? SignalingState.FALLBACK
+                : SignalingState.CLOSED)
             this.stateChange.activate(State.READY)
-            this.server.stateChange.cancel()
         }
       this.assert(State.READY, 'Connection with server closed prematurely')
     } catch (err) {

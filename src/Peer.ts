@@ -1,7 +1,9 @@
 import { Emitter, Listener } from 'fancy-emitter'
-import type { Name } from '@mothepro/signaling-lobby'
+import type { ClientID, Name } from '@mothepro/signaling-lobby'
+// TODO use ez-rtc instead
 import type SimplePeer from 'simple-peer'
 import Client from './Client.js'
+import Signaling from './Signaling.js'
 
 type Receiveable = Blob | ArrayBuffer
 export type Sendable = Receiveable | ArrayBufferView
@@ -38,25 +40,57 @@ export class MockPeer<T extends Sendable = Sendable> implements MySimplePeer<T> 
 }
 
 export default class <T extends Sendable = Sendable> implements MySimplePeer<T> {
-  private rtc!: SimplePeer.Instance
+  private rtc?: SimplePeer.Instance
+  private readonly fallbackId: ClientID
   readonly isYou = false
   readonly name: Name
   readonly message: Emitter<Exclude<T, ArrayBufferView>> = new Emitter
-  // @ts-ignore stupid...
-  readonly send = (data: T) => this.rtc.send(data)
-  readonly close = () => this.rtc.destroy()
-  readonly ready: Promise<void>
+  readonly ready: Promise<boolean>
 
-  constructor(stuns: string[], client: Client, retries = 1, timeout = -1) {
+  send(data: T) {
+    if (this.rtc)
+      this.rtc.send(data as any) // this is fine since browser handles casting
+    else if (this.fallback) {
+      let val: ArrayBuffer
+      if (data instanceof ArrayBuffer)
+        val = data
+      else if (ArrayBuffer.isView(data))
+        val = data.buffer
+      // TODO transform strings into buffers
+      else
+        throw Error('Only buffers can be used when sending data thru fallback server')
+      this.fallback.sendFallback(this.fallbackId, val)
+    } else
+      throw Error('Unable to send data to peer directly nor thru server')
+  }
+
+  // TODO closing all peers should close the fallback as well
+  close() {
+    if (this.rtc)
+      this.rtc.destroy()
+    this.message.cancel()
+  }
+
+  constructor(stuns: string[], client: Client, retries = 1, timeout = -1, readonly fallback?: Signaling) {
     this.name = client.name
+    this.fallbackId = client.id
     this.ready = this.makeRtc(stuns, client, retries, timeout)
       .then(() => { // Bind events to the message emitter
-        this.rtc.once('close', this.message.cancel)
-        this.rtc.once('error', this.message.deactivate)
-        this.rtc.on('data', data => this.message.activate(ArrayBuffer.isView(data) ? data.buffer : data))
+        this.rtc!.once('close', this.message.cancel)
+        this.rtc!.once('error', this.message.deactivate)
+        this.rtc!.on('data', data => this.message.activate(ArrayBuffer.isView(data) ? data.buffer : data))
+        return true
+      }).catch((reason: Error) => {
+        // Switch to fallback if the direct connection still isn't made
+        if (this.fallback) {
+          this.fallback.fallbackMessage.on(({from, data}) => from == this.fallbackId && this.message.activate(data))
+          return false
+        } else {
+          // Cancel early since no events will ever occur.
+          this.message.cancel()
+          throw reason
+        }
       })
-      // Cancel early since no events will ever occur.
-      .catch((reason: Error) => this.message.cancel() && Promise.reject(reason))
   }
 
   private makeRtc(stuns: string[], client: Client, retries: number, timeout: number): Promise<unknown> {
@@ -82,11 +116,11 @@ export default class <T extends Sendable = Sendable> implements MySimplePeer<T> 
     // Exchange the SDPs
     // If using trickle, listen to more than just 1 event from each
     this.rtc.once('signal', client.creator.activate)
-    client.acceptor.next.then(sdp => this.rtc.signal(sdp))
+    client.acceptor.next.then(sdp => this.rtc!.signal(sdp))
 
     return new Promise((resolve, reject) => {
       setTimeout(() => reject(Error(`Connection didn't become ready in ${timeout}ms`)), timeout)
-      this.rtc
+      this.rtc!
         .once('connect', resolve)
         .once('error', reject)
     }).catch(reason => retries > 0

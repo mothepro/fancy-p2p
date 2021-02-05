@@ -90,3 +90,13 @@ export function parseSdp(data: DataView) {
 
   throw Error(`Expected a SDP message, but got ${data}`)
 }
+
+export function parseFallback(data: DataView) {
+  if (data.byteLength > Size.SHORT)
+    return {
+      from: data.getUint16(0, true),
+      data: data.buffer.slice(Size.SHORT),
+    }
+
+  throw Error(`Expected a fallback message, but got ${data}`)
+}

@@ -25,7 +25,7 @@
   "scripts": {
     "build": "npm run build:npm && npm run build:esm",
     "pretest": "npm run build:npm",
-    "test": "echo 'no tests... yes'",
+    "test": "echo 'no tests... yet'",
     "prerelease": "npm run build",
     "release": "np",
     "importmap": "importly --host unpkg < package.json > demo/import-map.json",
@@ -61,6 +61,6 @@
   "dependencies": {
     "@types/ws": "^7.2.6",
     "fancy-emitter": "^2.0.0",
-    "simple-peer": "^9.7.2"
+    "simple-peer": "^9.9.3"
   }
 }

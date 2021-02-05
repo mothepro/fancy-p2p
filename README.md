@@ -69,10 +69,12 @@ const
         /** The version of `@mothepro/signaling-lobby` the signaling server is running */
         version,
     },
+    /** Whether to use the signaling server as a fallback when a direct connection to peer can not be established. */
+    fallback: false,
     /** Number of times to attempt to make an RTC connection. */
-    retries: 1;
+    retries: 1,
     /** The number of milliseconds to wait before giving up on the connection. */
-    timeout: 10 * 1000;
+    timeout: 10 * 1000,
   })
 ```
 

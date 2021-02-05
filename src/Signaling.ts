@@ -1,10 +1,10 @@
-import { SafeEmitter, Emitter, filterValue, filter } from 'fancy-emitter'
+import { SafeEmitter, Emitter, filterValue } from 'fancy-emitter'
 import type { ClientID, Name, LobbyID } from '@mothepro/signaling-lobby'
-import { parseGroupFinalize, parseGroupChange, parseClientLeave, parseClientJoin, parseSdp, parseYourName } from '../util/parsers.js'
+import { parseGroupFinalize, parseGroupChange, parseClientLeave, parseClientJoin, parseSdp, parseYourName, parseFallback } from '../util/parsers.js'
 import { buildProposal, buildSdp } from '../util/builders.js'
 import Client, { SimpleClient, MockClient } from './Client.js'
 import HashableSet from '../util/HashableSet.js'
-import { Code } from '../util/constants.js'
+import { Code, Size } from '../util/constants.js'
 
 class LeaveError extends Error {
   constructor(
@@ -16,12 +16,15 @@ class LeaveError extends Error {
 export const enum State {
   /** Connection with server is not yet open, i.e. closed. */
   CLOSED,
-  
+
   /** When our connection to signaling server is established. */
   READY,
 
   /** A group has been finalized and peers can began establishing direct connections. */
   FINALIZED,
+
+  /** The server connection will be used as a proxy for failed direct connections. */
+  FALLBACK,
 }
 
 /**
@@ -58,43 +61,52 @@ export default class {
   /** Clients we have finalized with. */
   members?: Client[]
 
-  /** Activated when a new client joins the lobby. */
+  /** Activates when a new client joins the lobby. */
   readonly connection: SafeEmitter<SimpleClient> = new SafeEmitter
+
+  /** Activates when the server sends a message on behalf of a failed peer connection. */
+  readonly fallbackMessage: SafeEmitter<ReturnType<typeof parseFallback>> = new SafeEmitter
 
   /** Activates when receiving some data from the signaling server. */
   private readonly message = new SafeEmitter<DataView>(data => {
     try {
-      if (this.state == State.FINALIZED) {
+      switch (this.state) {
+        case State.FALLBACK:
+          this.fallbackMessage.activate(parseFallback(data))
+          break
+
         // Accept the SDP from the client after they have created.
-        const { from, sdp } = parseSdp(data)
-        this.getClient(from).acceptor.activate(sdp)
-        return
-      }
-      
-      switch (data.getUint8(0)) {
-        case Code.YOUR_NAME:
-          this.connection.activate(this.self = new MockClient(parseYourName(data)))
-          return
+        case State.FINALIZED:
+          const { from, sdp } = parseSdp(data)
+          this.getClient(from).acceptor.activate(sdp)
+          break
 
-        case Code.CLIENT_JOIN:
-          this.handleClientJoin(parseClientJoin(data))
-          return
+        case State.READY:
+          switch (data.getUint8(0)) {
+            case Code.YOUR_NAME:
+              this.connection.activate(this.self = new MockClient(parseYourName(data)))
+              return
 
-        case Code.CLIENT_LEAVE:
-          this.getClient(parseClientLeave(data)).proposals.cancel()
-          return
+            case Code.CLIENT_JOIN:
+              this.handleClientJoin(parseClientJoin(data))
+              return
 
-        case Code.GROUP_REJECT:
-        case Code.GROUP_REQUEST:
-          this.handleGroupChange(parseGroupChange(data))
-          return
+            case Code.CLIENT_LEAVE:
+              this.getClient(parseClientLeave(data)).proposals.cancel()
+              return
 
-        case Code.GROUP_FINAL:
-          this.handleGroupFinalize(parseGroupFinalize(data))
-          return
+            case Code.GROUP_REJECT:
+            case Code.GROUP_REQUEST:
+              this.handleGroupChange(parseGroupChange(data))
+              return
 
-        default:
-          throw Error(`Unexpected data from server ${data}`)
+            case Code.GROUP_FINAL:
+              this.handleGroupFinalize(parseGroupFinalize(data))
+              return
+
+            default:
+              throw Error(`Unexpected data from server ${data}`)
+          }
       }
     } catch (err) {
       this.stateChange.deactivate(err)
@@ -187,7 +199,7 @@ export default class {
     this.server.addEventListener('open', () => this.stateChange.activate(State.READY))
     this.server.addEventListener('close', () => this.stateChange.activate(State.CLOSED))
     this.server.addEventListener('error', () => this.stateChange.deactivate(Error('Connection to Server closed unexpectedly.')))
-    this.server.addEventListener('message', async ({ data }) => this.message.activate(new DataView(data)))
+    this.server.addEventListener('message', ({ data }) => this.message.activate(new DataView(data)))
 
     // Close connection on error or completion
     filterValue(this.stateChange, State.CLOSED).finally(() => this.server.close())
@@ -234,5 +246,16 @@ export default class {
         ids.add(id)
 
     return !!ids.size && this.groups.has(ids.hash)
+  }
+
+  // Sends an indirect message to a peer thru signaling server
+  sendFallback(id: ClientID, data: ArrayBuffer) {
+    if (this.state != State.FALLBACK)
+      return
+
+    const view = new DataView(new ArrayBuffer(Size.SHORT + data.byteLength))
+    view.setUint16(0, id, true)
+    new Uint8Array(view.buffer, Size.SHORT).set(new Uint8Array(data)) // optimize?
+    this.serverSend(view.buffer)
   }
 }

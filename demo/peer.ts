@@ -39,6 +39,9 @@ export default class extends LitElement {
   @property({ type: Number })
   private timeout?: number
 
+  @property({ type: Boolean })
+  private fallback?: boolean
+
   @internalProperty()
   private random = 0
 
@@ -49,8 +52,8 @@ export default class extends LitElement {
     && this.requestUpdate()
 
   protected async firstUpdated() {
-    const { stuns, name, lobby, server: address, version, retries, timeout } = this
-    this.p2p = new P2P(name, { stuns, lobby, retries, timeout, server: { address, version } })
+    const { stuns, name, lobby, server: address, version, retries, timeout, fallback } = this
+    this.p2p = new P2P(name, { stuns, lobby, retries, timeout, fallback, server: { address, version } })
 
     try {
       for await (const state of this.p2p.stateChange) {
