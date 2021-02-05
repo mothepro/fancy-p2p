@@ -43,23 +43,23 @@
   },
   "devDependencies": {
     "@mothepro/signaling-lobby": "^0.3.3",
-    "@types/mocha": "^7.0.2",
-    "@types/should-sinon": "^0.0.6",
-    "@types/simple-peer": "^9.6.0",
+    "@types/mocha": "^8.2.0",
+    "@types/should-sinon": "^0.0.8",
+    "@types/simple-peer": "^9.6.1",
     "gh-pages": "^3.1.0",
     "importly": "^0.1.0-dev.0",
-    "lit-element": "^2.3.1",
+    "lit-element": "^2.4.0",
     "lit-log": "^0.0.1",
-    "mocha": "^8.0.1",
-    "np": "^6.2.5",
+    "mocha": "^8.2.1",
+    "np": "^7.2.0",
     "replace": "^1.2.0",
     "should": "^13.2.3",
     "should-sinon": "^0.0.6",
-    "sinon": "^9.0.2",
-    "typescript": "^3.9.6"
+    "sinon": "^9.2.4",
+    "typescript": "^4.1.3"
   },
   "dependencies": {
-    "@types/ws": "^7.2.6",
+    "@types/ws": "^7.4.0",
     "fancy-emitter": "^2.0.0",
     "simple-peer": "^9.9.3"
   }
