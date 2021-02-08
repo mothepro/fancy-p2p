@@ -81,9 +81,11 @@ export default class <T extends Sendable = Sendable> implements MySimplePeer<T> 
         this.rtc!.on('data', data => this.message.activate(ArrayBuffer.isView(data) ? data.buffer : data))
         return true
       }).catch((reason: Error) => {
+        delete this.rtc
         // Switch to fallback if the direct connection still isn't made
         if (this.fallback) {
-          this.fallback.fallbackMessage.on(({from, data}) => from == this.fallbackId && this.message.activate(data))
+          // @ts-ignore support all T in fallback messages
+          this.fallback.fallbackMessage.on(({ from, data }) => from == this.fallbackId && this.message.activate(data))
           return false
         } else {
           // Cancel early since no events will ever occur.
@@ -119,7 +121,8 @@ export default class <T extends Sendable = Sendable> implements MySimplePeer<T> 
     client.acceptor.next.then(sdp => this.rtc!.signal(sdp))
 
     return new Promise((resolve, reject) => {
-      setTimeout(() => reject(Error(`Connection didn't become ready in ${timeout}ms`)), timeout)
+      if (timeout > 0)
+        setTimeout(() => reject(Error(`Connection didn't become ready in ${timeout}ms`)), timeout)
       this.rtc!
         .once('connect', resolve)
         .once('error', reject)

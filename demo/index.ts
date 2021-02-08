@@ -22,14 +22,14 @@ export const stuns = [
   "stun:stun4.l.google.com:19302",
 ]
 
-
 // Add `lit-peer` element with the attributes if user has a name.
 // The attributes will usually be hardcoded into your app.
 if (params.has('name'))
   render(html`
     <lit-peer
+      fallback
       name=${params.get('name')!}
-      retries=5
+      retries=2
       timeout=5000
       version=0.3.2
       server=${signaling}
