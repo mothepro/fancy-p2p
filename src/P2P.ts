@@ -153,9 +153,9 @@ export default class <T extends Sendable = Sendable> {
                 : new MockPeer<T>(this.server.self!.name))
 
             // Every connection is connected successfully, ready up & close connection with server
-            const peerConnectionStatuses = await Promise.all(this.peers.map(peer => (peer as any).ready)) // Cast cause MockPeer.ready (undefined) will resolve instantly
+            const peerConnectionStatuses = await Promise.all(this.peers.map(peer => (peer as any).ready))
             this.server.stateChange.activate(
-                fallback && peerConnectionStatuses.some(directConnection => directConnection === false)
+                fallback && !peerConnectionStatuses.every(isUsingDirectConnection => isUsingDirectConnection)
                 ? SignalingState.FALLBACK
                 : SignalingState.CLOSED)
             this.stateChange.activate(State.READY)

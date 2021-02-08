@@ -36,6 +36,7 @@ export class MockPeer<T extends Sendable = Sendable> implements MySimplePeer<T> 
       ? data.buffer
       : data)
   readonly close = this.message.cancel
+  readonly ready = Promise.resolve(true)
   constructor(readonly name: Name) { }
 }
 
@@ -96,6 +97,9 @@ export default class <T extends Sendable = Sendable> implements MySimplePeer<T> 
   }
 
   private makeRtc(stuns: string[], client: Client, retries: number, timeout: number): Promise<unknown> {
+    if (retries <= 0)
+      throw Error('Not attempting to create a p2p connection')
+    
     // @ts-ignore from the `import 'simple-peer'`
     this.rtc = new SimplePeer({
       initiator: client.isOpener,
