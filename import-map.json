@@ -1,13 +1,15 @@
+
 {
-  "imports": {
-    "simple-peer/": "https://unpkg.com/simple-peer@9.7.2/",
-    "simple-peer": "https://unpkg.com/simple-peer@9.7.2/simplepeer.min.js",
+	"imports": {
     "fancy-emitter/": "https://unpkg.com/fancy-emitter@2.0.0/",
     "fancy-emitter": "https://unpkg.com/fancy-emitter@2.0.0/dist/esm/index.js",
-    "lit-element/": "//unpkg.com/lit-element@2.3.1/",
-    "lit-element": "//unpkg.com/lit-element@2.3.1/lit-element.js",
+    "lit-element/": "//unpkg.com/lit-element@2.4.0/",
+    "lit-element": "//unpkg.com/lit-element@2.4.0/lit-element.js",
     "lit-html/": "//unpkg.com/lit-html@1.1.2/",
     "lit-html": "//unpkg.com/lit-html@1.1.2/lit-html.js",
-    "lit-log": "//unpkg.com/lit-log@0.0.1/dist/esm/index.js"
+    "lit-log": "//unpkg.com/lit-log@0.0.1/dist/esm/index.js",
+    "simple-peer/": "https://unpkg.com/simple-peer@9.9.3/",
+    "simple-peer": "https://unpkg.com/simple-peer@9.9.3/simplepeer.min.js"
   }
 }
+
