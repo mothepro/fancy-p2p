@@ -12,7 +12,7 @@ const enum Message {
 
 const decoder = new TextDecoder,
   encoder = new TextEncoder,
-  orderTestLimit = 5e4
+  orderTestLimit = 5e3
 
 declare global {
   interface KeyboardEvent {

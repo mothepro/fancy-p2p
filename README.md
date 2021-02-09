@@ -60,19 +60,25 @@ const
   p2p = new P2P('Mo', {
     /** STUN servers to use to initialize P2P connections */
     stuns,
+
     /** Lobby ID to use for this app */
     lobby,
+
     /** Settings for the signaling server */
     server: {
         /** The address of the signaling server */
         address,
+        
         /** The version of `@mothepro/signaling-lobby` the signaling server is running */
         version,
     },
+
     /** Whether to use the signaling server as a fallback when a direct connection to peer can not be established. */
     fallback: false,
-    /** Number of times to attempt to make an RTC connection. */
+
+    /** Number of times to attempt to make an RTC connection, if negative direct p2p connections will not be attempted. */
     retries: 1,
+
     /** The number of milliseconds to wait before giving up on the connection. */
     timeout: 10 * 1000,
   })

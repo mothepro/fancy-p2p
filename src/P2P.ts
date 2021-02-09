@@ -97,7 +97,7 @@ export default class <T extends Sendable = Sendable> {
   constructor(
     /** Name used which find other clients in lobby. */
     name: Name,
-    { stuns, lobby, server: { address, version }, fallback = false, retries = 1, timeout = -1 }: {
+    { stuns, lobby, server: { address, version }, fallback = false, retries = 0, timeout = -1 }: {
       /** STUN servers to use to initialize P2P connections */
       stuns: string[]
       /** Lobby ID to use for this app */
@@ -111,7 +111,7 @@ export default class <T extends Sendable = Sendable> {
       }
       /** Whether to use the signaling server as a fallback when a direct connection to peer can not be established. */
       fallback?: boolean
-      /** Number of times to attempt to make an RTC connection. Defaults to 1 */
+      /** Number of times to attempt to make an RTC connection, if negative direct p2p connections will not be attempted. Defaults to 1 */
       retries?: number
       /** The number of milliseconds to wait before giving up on the connection. Doesn't give up by default */
       timeout?: number
@@ -151,6 +151,8 @@ export default class <T extends Sendable = Sendable> {
               this.peers.push(client instanceof Client
                 ? new Peer<T>(stuns, client, retries, timeout, fallback ? this.server : undefined)
                 : new MockPeer<T>(this.server.self!.name))
+            
+            this.server.peersForFallbackLogging = this.peers as unknown as Peer[]
 
             // Every connection is connected successfully, ready up & close connection with server
             const peerConnectionStatuses = await Promise.all(this.peers.map(peer => (peer as any).ready))

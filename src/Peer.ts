@@ -42,13 +42,13 @@ export class MockPeer<T extends Sendable = Sendable> implements MySimplePeer<T> 
 
 export default class <T extends Sendable = Sendable> implements MySimplePeer<T> {
   private rtc?: SimplePeer.Instance
-  private readonly fallbackId: ClientID
   readonly isYou = false
   readonly name: Name
   readonly message: Emitter<Exclude<T, ArrayBufferView>> = new Emitter
   readonly ready: Promise<boolean>
+  readonly fallbackId: ClientID
 
-  send(data: T) {
+  readonly send = (data: T)  => {
     if (this.rtc)
       this.rtc.send(data as any) // this is fine since browser handles casting
     else if (this.fallback) {
@@ -66,7 +66,7 @@ export default class <T extends Sendable = Sendable> implements MySimplePeer<T> 
   }
 
   // TODO closing all peers should close the fallback as well
-  close() {
+  readonly close = () => {
     if (this.rtc)
       this.rtc.destroy()
     this.message.cancel()
@@ -85,8 +85,10 @@ export default class <T extends Sendable = Sendable> implements MySimplePeer<T> 
         delete this.rtc
         // Switch to fallback if the direct connection still isn't made
         if (this.fallback) {
-          // @ts-ignore support all T in fallback messages
-          this.fallback.fallbackMessage.on(({ from, data }) => from == this.fallbackId && this.message.activate(data))
+          this.fallback.fallbackMessage
+            // @ts-ignore support all T in fallback messages
+            .on(({ from, data }) => from == this.fallbackId && this.message.activate(data))
+            .then(this.close)
           return false
         } else {
           // Cancel early since no events will ever occur.
@@ -97,7 +99,7 @@ export default class <T extends Sendable = Sendable> implements MySimplePeer<T> 
   }
 
   private makeRtc(stuns: string[], client: Client, retries: number, timeout: number): Promise<unknown> {
-    if (retries <= 0)
+    if (retries < 0)
       throw Error('Not attempting to create a p2p connection')
     
     // @ts-ignore from the `import 'simple-peer'`
