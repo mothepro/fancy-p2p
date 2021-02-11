@@ -1,5 +1,5 @@
 import { html, render } from 'lit-html'
-import pkg from '../package.json'
+import { name, version } from '../package.json'
 
 import 'lit-log'
 import './peer.js'
@@ -29,11 +29,11 @@ if (params.has('name'))
     <lit-peer
       fallback
       name=${params.get('name')!}
-      retries=2
+      retries=1
       timeout=5000
       version=0.3.2
       server=${signaling}
-      lobby=${`${pkg.name}@${pkg.version}`}
+      lobby=${`${name}@${version}`}
       .stuns=${stuns}
     ></lit-peer>`,
     document.getElementById('main')!)
