@@ -53,7 +53,7 @@ export default class extends LitElement {
 
   protected async firstUpdated() {
     const { stuns, name, lobby, server: address, version, retries, timeout, fallback } = this
-    this.p2p = new P2P(name, { stuns, lobby, retries, timeout, fallback, server: { address, version } })
+    this.p2p = new P2P({ name, stuns, lobby, retries, timeout, fallback, server: { address, version } })
 
     try {
       for await (const state of this.p2p.stateChange) {

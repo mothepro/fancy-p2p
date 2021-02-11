@@ -57,7 +57,10 @@ const
   lobby = 'app-name@v1.0',
 
   /** P2P instance */
-  p2p = new P2P('Mo', {
+  p2p = new P2P({
+    /** Name used to connect to lobby with. */
+    name: 'Mo',
+
     /** STUN servers to use to initialize P2P connections */
     stuns,
 

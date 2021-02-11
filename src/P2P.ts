@@ -95,9 +95,9 @@ export default class <T extends Sendable = Sendable> {
   }
 
   constructor(
-    /** Name used which find other clients in lobby. */
-    name: Name,
-    { stuns, lobby, server: { address, version }, fallback = false, retries = 0, timeout = -1 }: {
+    { name, stuns, lobby, server: { address, version }, fallback = false, retries = 0, timeout = -1 }: {
+      /** Name used to connect to lobby with. */
+      name: Name,
       /** STUN servers to use to initialize P2P connections */
       stuns: string[]
       /** Lobby ID to use for this app */
