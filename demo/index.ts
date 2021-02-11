@@ -2,7 +2,7 @@ import { html, render } from 'lit-html'
 import pkg from '../package.json' // Can't destruct JSON due to shimmer
 
 import 'lit-log'
-import './peer.js'
+import './p2p.js'
 
 const params = new URLSearchParams(location.search),
   isProd = location.protocol == 'https:'
@@ -22,11 +22,11 @@ export const stuns = [
   "stun:stun4.l.google.com:19302",
 ]
 
-// Add `lit-peer` element with the attributes if user has a name.
+// Add `lit-p2p` element with the attributes if user has a name.
 // The attributes will usually be hardcoded into your app.
 if (params.has('name'))
   render(html`
-    <lit-peer
+    <lit-p2p
       fallback
       name=${params.get('name')!}
       retries=1
@@ -35,5 +35,5 @@ if (params.has('name'))
       server=${signaling}
       lobby=${`${pkg.name}@${pkg.version}`}
       .stuns=${stuns}
-    ></lit-peer>`,
+    ></lit-p2p>`,
     document.getElementById('main')!)
