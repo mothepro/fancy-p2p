@@ -1,5 +1,5 @@
 import { html, render } from 'lit-html'
-import { name, version } from '../package.json'
+import pkg from '../package.json' // Can't destruct JSON due to shimmer
 
 import 'lit-log'
 import './peer.js'
@@ -33,7 +33,7 @@ if (params.has('name'))
       timeout=5000
       version=0.3.2
       server=${signaling}
-      lobby=${`${name}@${version}`}
+      lobby=${`${pkg.name}@${pkg.version}`}
       .stuns=${stuns}
     ></lit-peer>`,
     document.getElementById('main')!)
