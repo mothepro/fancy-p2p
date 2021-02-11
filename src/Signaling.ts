@@ -225,7 +225,7 @@ export default class {
     // Activate connection with self once ready, if the server won't assign the name (i.e. we set our own name)
     if (name)
       filterValue(this.stateChange, State.READY)
-        .then() // pass thru to allow connections listener to be bound first
+        .then() // pass thru to allow `this.connection` listener to be bound first
         .then(() => this.connection.activate(this.self = new MockClient(name)))
         .catch(() => { }) // handle error elsewhere
   }

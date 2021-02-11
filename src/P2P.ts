@@ -155,6 +155,7 @@ export default class <T extends Sendable = Sendable> {
             this.server.peersForFallbackLogging = this.peers as unknown as Peer[]
 
             // Every connection is connected successfully, ready up & close connection with server
+            // TODO, does every promise need to resolve? Or can broken peers just be kicked?
             const peerConnectionStatuses = await Promise.all(this.peers.map(peer => (peer as any).ready))
             this.server.stateChange.activate(
                 fallback && !peerConnectionStatuses.every(isUsingDirectConnection => isUsingDirectConnection)

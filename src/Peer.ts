@@ -128,7 +128,7 @@ export default class <T extends Sendable = Sendable> implements MySimplePeer<T> 
 
     return new Promise((resolve, reject) => {
       if (timeout > 0)
-        setTimeout(() => reject(Error(`Connection didn't become ready in ${timeout}ms`)), timeout)
+        setTimeout(() => reject(Error(`Connection with "${this.name}" didn't become ready in ${timeout}ms`)), timeout)
       this.rtc!
         .once('connect', resolve)
         .once('error', reject)
