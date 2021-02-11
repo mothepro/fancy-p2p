@@ -22,7 +22,7 @@ declare global {
   }
 }
 
-@customElement('lit-direct')
+@customElement('lit-ready')
 export default class extends LitElement {
   @internalProperty()
   private data = ''

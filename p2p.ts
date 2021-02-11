@@ -3,7 +3,7 @@ import type { LogEntry } from 'lit-log'
 import P2P, { State, Client, Sendable } from '../index.js'
 
 import './lobby.js'
-import './direct.js'
+import './ready.js'
 
 type ProposeGroupEvent = CustomEvent<Client[]>
 type BroadcastEvent = CustomEvent<Sendable>
@@ -16,7 +16,7 @@ declare global {
   }
 }
 
-@customElement('lit-peer')
+@customElement('lit-p2p')
 export default class extends LitElement {
   @property({ type: String })
   private name!: string
@@ -53,7 +53,7 @@ export default class extends LitElement {
 
   protected async firstUpdated() {
     const { stuns, name, lobby, server: address, version, retries, timeout, fallback } = this
-    this.p2p = new P2P(name, { stuns, lobby, retries, timeout, fallback, server: { address, version } })
+    this.p2p = new P2P({ name, stuns, lobby, retries, timeout, fallback, server: { address, version } })
 
     try {
       for await (const state of this.p2p.stateChange) {
@@ -98,12 +98,12 @@ export default class extends LitElement {
 
         case State.READY:
           return html`
-            <lit-direct
+            <lit-ready
               .peers=${this.p2p.peers}
               next-random=${this.random}
               @broadcast=${this.broadcast}
               @requestRNG=${() => this.random = this.p2p!.random(true)}
-            ></lit-direct>`
+            ></lit-ready>`
       }
 
     return 'Offline'
