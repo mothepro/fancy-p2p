@@ -45,7 +45,7 @@ export default class <T extends Sendable = Sendable> implements MySimplePeer<T> 
   readonly isYou = false
   readonly name: Name
   readonly message: Emitter<Exclude<T, ArrayBufferView>> = new Emitter
-  readonly ready: Promise<boolean>
+  readonly ready: Promise<boolean> // maybe check existance of this.rtc instead
   readonly fallbackId: ClientID
 
   readonly send = (data: T)  => {
@@ -80,6 +80,7 @@ export default class <T extends Sendable = Sendable> implements MySimplePeer<T> 
         this.rtc!.once('close', this.message.cancel)
         this.rtc!.once('error', this.message.deactivate)
         this.rtc!.on('data', data => this.message.activate(ArrayBuffer.isView(data) ? data.buffer : data))
+        // TODO get rid of this.fallback?
         return true
       }).catch((reason: Error) => {
         delete this.rtc

@@ -58,7 +58,7 @@ const
 
   /** P2P instance */
   p2p = new P2P({
-    /** Name used to connect to lobby with. */
+    /** Name used to connect to lobby with */
     name: 'Mo',
 
     /** STUN servers to use to initialize P2P connections */
@@ -284,3 +284,4 @@ for (const peer of p2p.peers)
 + Test RTC possibility before starting server connection
 + Support trickle ICE
 + Improve peer lib `simple-peer` is messes with buffer
++ Undo https://github.com/mothepro/fancy-p2p/commit/527da616bf1982bac84ed66f55d3295df8074ff1 ??

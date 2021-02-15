@@ -86,17 +86,9 @@ export default class <T extends Sendable = Sendable> {
         peer.send(data)
   }
 
-  /** Disconnects from the lobby. */
-  readonly leaveLobby = () => {
-    if (this.state == State.OFFLINE)
-      return // noop if not connected yet.
-    this.assert(State.LOBBY)
-    this.server.stateChange.cancel()
-  }
-
   constructor(
     { name, stuns, lobby, server: { address, version }, fallback = false, retries = 0, timeout = -1 }: {
-      /** Name used to connect to lobby with. */
+      /** Name used to connect to lobby with */
       name: Name,
       /** STUN servers to use to initialize P2P connections */
       stuns: string[]
@@ -121,6 +113,9 @@ export default class <T extends Sendable = Sendable> {
     // Bind Emitters
     this.lobbyConnection = this.server.connection
     this.bindServerState(stuns, retries, timeout, fallback)
+    this.stateChange.on(() => { })
+      .finally(this.server.stateChange.cancel) // close server when state is done
+      .catch(() => { }) // handle elsewhere
   }
 
   private async bindServerState(stuns: string[], retries: number, timeout: number, fallback: boolean) {

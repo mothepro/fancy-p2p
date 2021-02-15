@@ -94,6 +94,8 @@ export default class {
               return
 
             case Code.CLIENT_LEAVE:
+              // TODO Also close peer's connection if in fallback
+              // server needs to send message since we are in group not lobby state
               this.getClient(parseClientLeave(data)).proposals.cancel()
               return
 
@@ -189,6 +191,40 @@ export default class {
       this.serverSend(buildSdp(id, sdp))
   }
 
+  private async bindStateChanges(mockPeerName?: Name) {
+    try {
+      for await (const state of this.stateChange)
+        switch (state) {
+          case State.CLOSED:
+            this.stateChange.cancel()
+            break
+          
+          // Log which connections worked and failed.
+          case State.FALLBACK:
+            const fails: Peer[] = []
+            for (const peer of this.peersForFallbackLogging)
+              if (!peer.isYou && !(await peer.ready)) // this is a promise, so don't use `.filter`, even tho it's already been resolved
+                fails.push(peer)
+          
+            if (fails.length) // sanity check
+              console.warn(`${fails.length} out of ${this.peersForFallbackLogging.length - 1} direct connections broke.
+              Failed peers IDs: ${fails.map(({ fallbackId }) => fallbackId).join(', ')}`)
+
+            // TODO log on server
+            break
+          
+          case State.READY:
+            if (mockPeerName)
+              Promise.resolve() // Wait a tick; Allow `this.connection` listener to be bound first
+                .then(() => this.connection.activate(this.self = new MockClient(mockPeerName)))
+            break
+        }
+    } finally {
+      this.fallbackMessage.cancel()
+      this.server.close()
+    }
+  }
+
   constructor(address: URL | string, lobby: LobbyID, name?: Name, protocol?: string | string[]) {
     if (typeof address == 'string')
       address = new URL(address)
@@ -202,32 +238,7 @@ export default class {
     this.server.addEventListener('close', () => this.stateChange.activate(State.CLOSED))
     this.server.addEventListener('error', () => this.stateChange.deactivate(Error('Connection to Server closed unexpectedly.')))
     this.server.addEventListener('message', ({ data }) => this.message.activate(new DataView(data)))
-
-    // Close connection on error or completion
-    filterValue(this.stateChange, State.CLOSED)
-      .finally(() => this.stateChange.cancel() && this.fallbackMessage.cancel() && this.server.close())
-      .catch(() => { }) // handle error elsewhere
-    
-    // Log which connections worked and failed.
-    filterValue(this.stateChange, State.FALLBACK)
-      .then(async () => {
-        const fails: Peer[] = []
-        for (const peer of this.peersForFallbackLogging)
-          if (!peer.isYou && !(await peer.ready)) // this is a promise, so don't use `.filter`, even tho it's already been resolved
-            fails.push(peer)
-      
-        console.warn(`Unable to establish ${fails.length} out of ${this.peersForFallbackLogging.length - 1} direct connections.
-        Failed peers IDs: ${fails.map(({ fallbackId }) => fallbackId).join(', ')}`)
-
-        // TODO log on server
-       }).catch(() => { }) // handle error elsewhere
-
-    // Activate connection with self once ready, if the server won't assign the name (i.e. we set our own name)
-    if (name)
-      filterValue(this.stateChange, State.READY)
-        .then() // pass thru to allow `this.connection` listener to be bound first
-        .then(() => this.connection.activate(this.self = new MockClient(name)))
-        .catch(() => { }) // handle error elsewhere
+    this.bindStateChanges(name)
   }
 
   /** Proposes a group to the server and returns the emitter that will be activated when clients accept it. */
