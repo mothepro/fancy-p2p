@@ -5,8 +5,8 @@ import type { ClientID, Name } from '@mothepro/signaling-lobby'
 export interface SimpleClient {
   /** Name of this client. */
   readonly name: Name
-  /** Activated when this client proposes a new group. */
-  readonly proposals: SafeListener<{
+  /** Activated when this client proposes a new group. Closed when client leaves. */
+  readonly proposals: Listener<{
     /** The other members in this group, including me. */
     members: SimpleClient[]
     /** Function to accept or reject the group, not present if you created the group */

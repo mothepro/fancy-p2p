@@ -123,8 +123,8 @@ interface Client {
   /** Name of this client. */
   readonly name: Name
 
-  /** Activated when a initiating a new group. */
-  readonly proposals: SafeListener<{
+  /** Activated when a initiating a new group. Closed when client leaves. */
+  readonly proposals: Listener<{
 
       /** The other members in this group, including me. */
       members: Client[]
