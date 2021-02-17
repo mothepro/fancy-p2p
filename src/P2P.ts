@@ -1,4 +1,4 @@
-import { Emitter, SafeListener } from 'fancy-emitter'
+import { Emitter, Listener } from 'fancy-emitter'
 import type { Name, LobbyID, ClientID } from '@mothepro/signaling-lobby'
 import Client, { SimpleClient } from './Client.js'
 import Peer, { MySimplePeer, MockPeer, Sendable } from './Peer.js'
@@ -29,7 +29,7 @@ export default class <T extends Sendable = Sendable> {
   readonly stateChange = new Emitter<State>(newState => (this.state as State) = newState)
 
   /** Activated when a client joins the lobby. */
-  readonly lobbyConnection: SafeListener<SimpleClient>
+  readonly lobbyConnection: Listener<SimpleClient>
 
   /** The peers who's connections are still open */
   readonly peers: MySimplePeer<T>[] = []

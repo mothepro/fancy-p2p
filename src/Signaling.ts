@@ -61,7 +61,7 @@ export default class {
   members?: Client[]
 
   /** Activates when a new client joins the lobby. */
-  readonly connection: SafeEmitter<SimpleClient> = new SafeEmitter
+  readonly connection: Emitter<SimpleClient> = new Emitter
 
   /** Activates when the server sends a message on behalf of a failed peer connection. */
   readonly fallbackMessage: Emitter<ReturnType<typeof parseFallback>> = new Emitter
@@ -191,7 +191,7 @@ export default class {
       this.serverSend(buildSdp(id, sdp))
   }
 
-  private async bindStateChanges(mockPeerName?: Name) {
+  private async bindStateChanges(presetName?: Name) {
     try {
       for await (const state of this.stateChange)
         switch (state) {
@@ -214,13 +214,15 @@ export default class {
             break
           
           case State.READY:
-            if (mockPeerName)
-              Promise.resolve() // Wait a tick; Allow `this.connection` listener to be bound first
-                .then(() => this.connection.activate(this.self = new MockClient(mockPeerName)))
+            if (presetName) {
+              await Promise.resolve() // Wait a tick; Allow `this.connection` listener to be bound first
+              this.connection.activate(this.self = new MockClient(presetName))
+            }
             break
         }
     } finally {
       this.fallbackMessage.cancel()
+      this.connection.cancel()
       this.server.close()
     }
   }
