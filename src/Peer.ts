@@ -99,7 +99,7 @@ export default class <T extends Sendable = Sendable> implements MySimplePeer<T> 
       })
   }
 
-  private makeRtc(stuns: string[], client: Client, retries: number, timeout: number): Promise<unknown> {
+  private async makeRtc(stuns: string[], client: Client, retries: number, timeout: number): Promise<unknown> {
     if (retries < 0)
       throw Error('Not attempting to create a p2p connection')
     
@@ -127,6 +127,7 @@ export default class <T extends Sendable = Sendable> implements MySimplePeer<T> 
     this.rtc.once('signal', client.creator.activate)
     client.acceptor.next.then(sdp => this.rtc!.signal(sdp))
 
+    // This looks weird, but is how to handle optional chaining a set number of times (retries)
     return new Promise((resolve, reject) => {
       if (timeout > 0)
         setTimeout(() => reject(Error(`Connection with "${this.name}" didn't become ready in ${timeout}ms`)), timeout)
